@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Book Haraj 3.0 Review Kiosk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-gold: #ffb83d;
+      --brand-ink: #020617;
+    }
+    body {
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      background-color: var(--brand-ink);
+    }
+    .serif {
+      font-family: 'Playfair Display', serif;
+    }
+    .kiosk-bg {
+      background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Kinetic & Entry Animations */
+    @keyframes fade-in-up {
+      from { opacity: 0; transform: translateY(40px) scale(0.98); filter: blur(10px); }
+      to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    .animate-fade-in-up {
+      animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fade-in {
+      animation: fade-in 1s ease-out forwards;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .animate-shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,184,61,0.2), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes glow-pulse {
+      0% { box-shadow: 0 0 5px rgba(255,184,61,0.2); transform: scale(1); }
+      50% { box-shadow: 0 0 30px rgba(255,184,61,0.5); transform: scale(1.02); }
+      100% { box-shadow: 0 0 5px rgba(255,184,61,0.2); transform: scale(1); }
+    }
+    .animate-glow-pulse {
+      animation: glow-pulse 3s infinite ease-in-out;
+    }
+
+    @keyframes slide-reveal {
+      from { clip-path: inset(0 100% 0 0); }
+      to { clip-path: inset(0 0 0 0); }
+    }
+    .animate-slide-reveal {
+      animation: slide-reveal 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+    }
+
+    @keyframes floating-slow {
+      0% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(2deg); }
+      100% { transform: translateY(0px) rotate(0deg); }
+    }
+    .animate-float {
+      animation: floating-slow 8s infinite ease-in-out;
+    }
+
+    @keyframes loading-bar {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+    .animate-loading-bar {
+      animation: loading-bar 5s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    }
+
+    @keyframes star-pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    .animate-star-pop {
+      animation: star-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* Ambient Background Elements */
+    .ambient-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--brand-gold);
+      filter: blur(80px);
+      opacity: 0.05;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-gold { background-color: var(--brand-gold); }
+    .text-gold { color: var(--brand-gold); }
+    .border-gold { border-color: var(--brand-gold); }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
+</head>
+<body class="kiosk-bg h-screen w-screen m-0 p-0 text-slate-100 relative overflow-hidden">
+  <!-- Dynamic Ambient Background -->
+  <div class="ambient-circle w-[600px] h-[600px] -top-40 -left-40 animate-float" style="animation-duration: 15s"></div>
+  <div class="ambient-circle w-[400px] h-[400px] top-1/2 -right-20 animate-float" style="animation-duration: 20s; animation-delay: -5s"></div>
+  <div class="ambient-circle w-[500px] h-[500px] -bottom-40 left-1/3 animate-float" style="animation-duration: 18s; animation-delay: -2s"></div>
+  
+  <div id="root" class="h-full w-full relative z-10"></div>
+</body>
+</html>
