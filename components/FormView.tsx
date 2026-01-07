@@ -60,6 +60,8 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    } else {
+      onCancel(); // Go back to camera if on first step
     }
   };
 
@@ -75,14 +77,24 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
   return (
     <div className={`bg-[#020617] flex flex-col w-full max-w-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative ${isRemote ? 'h-full rounded-none' : 'h-[85vh] rounded-[40px] border border-white/10'} overflow-hidden animate-fade-in`}>
       
+      {/* Back Button Overlay */}
+      <button 
+        onClick={prevStep}
+        className="absolute top-8 left-8 z-40 w-12 h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white border border-white/10 transition-all shadow-xl"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
       {/* Step Indicator Top Bar */}
-      <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-30">
+      <div className="absolute top-8 left-24 right-8 flex justify-between items-center z-30">
         <p className="text-[#ffb83d] text-[12px] font-black uppercase tracking-[0.2em] opacity-80">
           STEP {currentStep + 1} OF {totalSteps}
         </p>
         <button 
           onClick={onCancel} 
-          className="w-12 h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white/60 transition-all border border-white/10"
+          className="w-12 h-12 bg-red-500/10 hover:bg-red-500/20 rounded-full flex items-center justify-center text-red-400 transition-all border border-red-500/20"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
@@ -190,15 +202,12 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
       <div className="px-10 pb-12 flex gap-6">
         <button
           onClick={prevStep}
-          disabled={currentStep === 0}
-          className={`flex-1 py-6 rounded-2xl font-black uppercase tracking-[0.2em] transition-all text-[12px] flex items-center justify-center gap-3 border border-white/5 ${
-            currentStep === 0 ? 'opacity-0 pointer-events-none' : 'bg-slate-900 text-slate-500 hover:text-white'
-          }`}
+          className="flex-1 py-6 rounded-2xl font-black uppercase tracking-[0.2em] transition-all text-[12px] flex items-center justify-center gap-3 bg-slate-900 text-slate-500 hover:text-white border border-white/5"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7 7-7" />
           </svg>
-          PREVIOUS
+          BACK
         </button>
 
         <button
