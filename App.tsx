@@ -7,7 +7,7 @@ import FormView from './components/FormView.tsx';
 import ThanksView from './components/ThanksView.tsx';
 import ReviewWall from './components/ReviewWall.tsx';
 import Logo3 from './components/Logo3.tsx';
-import { supabase } from './lib/supabase.ts';
+import { supabase, isConfigured } from './lib/supabase.ts';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
@@ -17,25 +17,38 @@ const App: React.FC = () => {
   const [isRemoteMode, setIsRemoteMode] = useState(false);
   const [singleReviewId, setSingleReviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Initial Fetch & Realtime Subscription
   useEffect(() => {
-    const fetchReviews = async () => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(50);
-      
-      if (!error && data) {
-        setReviews(data);
-      }
+    if (!isConfigured || !supabase) {
       setLoading(false);
+      return;
+    }
+
+    const fetchReviews = async () => {
+      try {
+        const { data, fetchError } = await supabase
+          .from('reviews')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(50);
+        
+        if (fetchError) throw fetchError;
+        if (data) setReviews(data);
+      } catch (err: any) {
+        console.error("Fetch error:", err);
+        // If the table doesn't exist yet, we don't crash, just show empty
+        if (err.code !== 'PGRST116') {
+          setError(err.message);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchReviews();
 
-    // Subscribe to real-time updates (Photographers + Other Kiosks)
     const channel = supabase
       .channel('public:reviews')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews' }, (payload) => {
@@ -77,6 +90,8 @@ const App: React.FC = () => {
   };
 
   const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
+    if (!supabase) return;
+
     const newReview: Partial<Review> = {
       name: details.name,
       photo: currentReview.photo || '',
@@ -85,7 +100,6 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
-    // Save to Supabase
     const { data, error } = await supabase
       .from('reviews')
       .insert([newReview])
@@ -93,7 +107,7 @@ const App: React.FC = () => {
 
     if (error) {
       console.error("Error saving review:", error);
-      alert("Failed to save review. Please try again.");
+      alert("Failed to save review. Please check your database connection.");
       return;
     }
 
@@ -109,6 +123,26 @@ const App: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [step, resetKiosk]);
+
+  // Handle Missing Configuration
+  if (!isConfigured) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617]">
+        <div className="w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-8 border border-amber-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Configuration Required</h1>
+        <p className="text-slate-400 max-w-sm text-sm leading-relaxed mb-8">
+          The application is missing its connection to the database. Please add <code className="text-[#ffb83d]">SUPABASE_URL</code> and <code className="text-[#ffb83d]">SUPABASE_ANON_KEY</code> to your Dokploy environment variables.
+        </p>
+        <button onClick={() => window.location.reload()} className="px-8 py-3 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
 
   if (isDisplayMode) {
     return (

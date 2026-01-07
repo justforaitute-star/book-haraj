@@ -1,11 +1,22 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+// Safely access process.env to prevent ReferenceErrors in browsers
+const getEnv = (key: string): string => {
+  try {
+    return (typeof process !== 'undefined' && process.env && process.env[key]) || '';
+  } catch {
+    return '';
+  }
+};
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase credentials missing. Check environment variables.");
-}
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Only create the client if we have valid-looking credentials
+// This prevents the library from throwing an error during module import
+export const isConfigured = !!(supabaseUrl && supabaseAnonKey);
+
+export const supabase = isConfigured 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
