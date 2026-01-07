@@ -18,8 +18,8 @@ const App: React.FC = () => {
   const [singleReviewId, setSingleReviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
-  // Initial Fetch & Realtime Subscription
   useEffect(() => {
     if (!isConfigured || !supabase) {
       setLoading(false);
@@ -28,17 +28,16 @@ const App: React.FC = () => {
 
     const fetchReviews = async () => {
       try {
-        const { data, fetchError } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('reviews')
           .select('*')
           .order('timestamp', { ascending: false })
           .limit(50);
         
         if (fetchError) throw fetchError;
-        if (data) setReviews(data);
+        if (data) setReviews(data as Review[]);
       } catch (err: any) {
         console.error("Fetch error:", err);
-        // If the table doesn't exist yet, we don't crash, just show empty
         if (err.code !== 'PGRST116') {
           setError(err.message);
         }
@@ -57,7 +56,6 @@ const App: React.FC = () => {
       })
       .subscribe();
 
-    // URL Routing
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'display') {
       setIsDisplayMode(true);
@@ -124,7 +122,6 @@ const App: React.FC = () => {
     }
   }, [step, resetKiosk]);
 
-  // Handle Missing Configuration
   if (!isConfigured) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617]">
@@ -133,13 +130,59 @@ const App: React.FC = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Configuration Required</h1>
-        <p className="text-slate-400 max-w-sm text-sm leading-relaxed mb-8">
-          The application is missing its connection to the database. Please add <code className="text-[#ffb83d]">SUPABASE_URL</code> and <code className="text-[#ffb83d]">SUPABASE_ANON_KEY</code> to your Dokploy environment variables.
-        </p>
-        <button onClick={() => window.location.reload()} className="px-8 py-3 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
-          Refresh Page
-        </button>
+        <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Configuration Not Found</h1>
+        <div className="text-slate-400 max-w-sm text-sm leading-relaxed mb-8 space-y-6">
+          <p>The application is running but cannot find your database credentials. This usually means the environment variables were not available when the app was built.</p>
+          
+          <div className="bg-slate-900/50 border border-white/5 p-5 rounded-2xl text-left">
+            <h4 className="text-slate-200 font-black text-[10px] uppercase tracking-widest mb-3">Checklist for Dokploy:</h4>
+            <ul className="text-[11px] text-slate-400 space-y-3 font-medium">
+              <li className="flex gap-2">
+                <span className="text-[#ffb83d]">01.</span> 
+                <span>Verify keys are named <code className="text-white">VITE_SUPABASE_URL</code> and <code className="text-white">VITE_SUPABASE_ANON_KEY</code>.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-[#ffb83d]">02.</span> 
+                <span>Go to Deployments and click <b>Redeploy</b> (this is mandatory after changing keys).</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="pt-2">
+            <button 
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className="text-[#ffb83d] text-[10px] font-black uppercase tracking-widest underline decoration-2 underline-offset-4"
+            >
+              {showDiagnostics ? 'Hide Diagnostic Data' : 'View Diagnostic Data'}
+            </button>
+            
+            {showDiagnostics && (
+              <div className="mt-4 p-4 bg-black rounded-xl text-left font-mono text-[9px] text-slate-500 overflow-x-auto border border-white/5 animate-fade-in">
+                <div>User Agent: {navigator.userAgent}</div>
+                <div>Configured: {String(isConfigured)}</div>
+                <div className="mt-2 text-white/50 border-t border-white/5 pt-2">Resolution Checks:</div>
+                <div className="text-amber-500/70">
+                  - import.meta.env detection: {
+                    (() => {
+                      try { return String(!!((import.meta as any).env?.VITE_SUPABASE_URL)) }
+                      catch(e) { return 'N/A' }
+                    })()
+                  }<br/>
+                  - window object keys: {
+                    Object.keys(window).filter(k => k.includes('SUPABASE')).join(', ') || 'None'
+                  }<br/>
+                  - process.env status: {typeof process !== 'undefined' ? 'Available' : 'Missing'}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <button onClick={() => window.location.reload()} className="w-full py-4 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
+            Refresh & Retry
+          </button>
+        </div>
       </div>
     );
   }
