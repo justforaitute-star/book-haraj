@@ -18,7 +18,7 @@ export interface DetailedRatings {
 }
 
 export interface Review {
-  id: string;
+  id: string; // Changed to string for UUID compatibility
   name: string;
   photo: string; // base64
   ratings: DetailedRatings;

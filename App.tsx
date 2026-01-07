@@ -7,34 +7,44 @@ import FormView from './components/FormView.tsx';
 import ThanksView from './components/ThanksView.tsx';
 import ReviewWall from './components/ReviewWall.tsx';
 import Logo3 from './components/Logo3.tsx';
-
-const STORAGE_KEY = 'book_haraj_reviews_v3';
+import { supabase } from './lib/supabase.ts';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
-  const [reviews, setReviews] = useState<Review[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [currentReview, setCurrentReview] = useState<Partial<Review>>({});
   const [isDisplayMode, setIsDisplayMode] = useState(false);
   const [isRemoteMode, setIsRemoteMode] = useState(false);
   const [singleReviewId, setSingleReviewId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Initial Fetch & Realtime Subscription
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          setReviews(JSON.parse(e.newValue));
-        } catch (err) {}
+    const fetchReviews = async () => {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(50);
+      
+      if (!error && data) {
+        setReviews(data);
       }
+      setLoading(false);
     };
-    window.addEventListener('storage', handleStorageChange);
 
+    fetchReviews();
+
+    // Subscribe to real-time updates (Photographers + Other Kiosks)
+    const channel = supabase
+      .channel('public:reviews')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews' }, (payload) => {
+        const newReview = payload.new as Review;
+        setReviews(prev => [newReview, ...prev].slice(0, 50));
+      })
+      .subscribe();
+
+    // URL Routing
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'display') {
       setIsDisplayMode(true);
@@ -46,7 +56,9 @@ const App: React.FC = () => {
       setStep(KioskStep.CAMERA);
     }
 
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const resetKiosk = useCallback(() => {
@@ -64,24 +76,36 @@ const App: React.FC = () => {
     setStep(KioskStep.FORM);
   };
 
-  const handleFormSubmit = (details: { name: string; ratings: DetailedRatings; comment: string }) => {
-    const newReview: Review = {
-      id: Math.random().toString(36).substr(2, 9),
+  const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
+    const newReview: Partial<Review> = {
+      name: details.name,
       photo: currentReview.photo || '',
-      ...details,
+      ratings: details.ratings,
+      comment: details.comment,
       timestamp: Date.now()
     };
     
-    const updatedReviews = [newReview, ...reviews].slice(0, 50);
-    setReviews(updatedReviews);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReviews));
-    setCurrentReview(newReview); // Keep the full object so ThanksView can use the ID
-    setStep(KioskStep.THANKS);
+    // Save to Supabase
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert([newReview])
+      .select();
+
+    if (error) {
+      console.error("Error saving review:", error);
+      alert("Failed to save review. Please try again.");
+      return;
+    }
+
+    if (data && data[0]) {
+      setCurrentReview(data[0]);
+      setStep(KioskStep.THANKS);
+    }
   };
 
   useEffect(() => {
     if (step === KioskStep.THANKS) {
-      const timer = setTimeout(resetKiosk, 12000); // Increased time to allow QR scanning
+      const timer = setTimeout(resetKiosk, 12000);
       return () => clearTimeout(timer);
     }
   }, [step, resetKiosk]);
@@ -117,25 +141,34 @@ const App: React.FC = () => {
       )}
 
       <main className={`flex-1 w-full flex items-center justify-center px-6 relative z-10 overflow-hidden ${isRemoteMode ? 'pt-4' : ''}`}>
-        {step === KioskStep.HOME && (
-          <HomeView 
-            onStart={handleStart} 
-            onToggleMode={() => {
-              setIsDisplayMode(true);
-              const url = new URL(window.location.href);
-              url.searchParams.set('mode', 'display');
-              window.history.pushState({}, '', url.toString());
-            }} 
-          />
-        )}
-        {step === KioskStep.CAMERA && (
-          <CameraView onCapture={handlePhotoCapture} onCancel={resetKiosk} isRemote={isRemoteMode} />
-        )}
-        {step === KioskStep.FORM && (
-          <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />
-        )}
-        {step === KioskStep.THANKS && (
-          <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} reviewId={currentReview.id} />
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 animate-pulse">
+            <div className="w-12 h-12 border-4 border-[#ffb83d] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Connecting to Haraj 3.0...</p>
+          </div>
+        ) : (
+          <>
+            {step === KioskStep.HOME && (
+              <HomeView 
+                onStart={handleStart} 
+                onToggleMode={() => {
+                  setIsDisplayMode(true);
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('mode', 'display');
+                  window.history.pushState({}, '', url.toString());
+                }} 
+              />
+            )}
+            {step === KioskStep.CAMERA && (
+              <CameraView onCapture={handlePhotoCapture} onCancel={resetKiosk} isRemote={isRemoteMode} />
+            )}
+            {step === KioskStep.FORM && (
+              <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />
+            )}
+            {step === KioskStep.THANKS && (
+              <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} reviewId={currentReview.id} />
+            )}
+          </>
         )}
       </main>
 
@@ -144,7 +177,7 @@ const App: React.FC = () => {
            <div className="flex items-center gap-2">
              <div className="w-2 h-2 bg-[#ffb83d] rounded-[1px]"></div>
              <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.6em]">
-               LIVE VISITOR FEED
+               LIVE VISITOR FEED • {reviews.length} POSTS
              </div>
              <div className="w-2 h-2 bg-[#ffb83d] rounded-[1px]"></div>
            </div>
