@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskStep, Review, DetailedRatings } from './types.ts';
 import HomeView from './components/HomeView.tsx';
 import CameraView from './components/CameraView.tsx';
@@ -10,8 +10,6 @@ import Logo3 from './components/Logo3.tsx';
 import { supabase, isConfigured } from './lib/supabase.ts';
 
 const App: React.FC = () => {
-  console.log("Book Haraj Kiosk: App Component Initializing...");
-
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentReview, setCurrentReview] = useState<Partial<Review>>({});
@@ -20,47 +18,93 @@ const App: React.FC = () => {
   const [singleReviewId, setSingleReviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  const loadingTimeoutRef = useRef<number | null>(null);
+
+  const fetchReviews = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(50);
+      
+      if (fetchError) throw fetchError;
+      if (data) {
+        setReviews(data as Review[]);
+        setError(null);
+      }
+    } catch (err: any) {
+      console.error("Book Haraj Kiosk: Fetch error:", err);
+      if (reviews.length === 0) {
+        setError(`Database Error: ${err.message || 'Could not connect'}`);
+      }
+    } finally {
+      setLoading(false);
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+    }
+  }, [reviews.length]);
+
+  const handleDeleteAll = async () => {
+    if (!supabase) return;
+    if (!window.confirm("CRITICAL ACTION: Are you sure you want to delete ALL reviews from the database? This cannot be undone.")) return;
+
+    try {
+      // In Supabase, deleting with a filter that matches all rows is the common way to clear a table
+      const { error: deleteError } = await supabase
+        .from('reviews')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Matches all valid UUIDs
+
+      if (deleteError) throw deleteError;
+      
+      setReviews([]);
+      alert("Feed cleared successfully.");
+    } catch (err: any) {
+      console.error("Delete all error:", err);
+      alert(`Failed to delete reviews: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
-    console.log("Book Haraj Kiosk: Running initialization effect. Configured:", isConfigured);
-    
+    loadingTimeoutRef.current = window.setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        if (reviews.length === 0 && !error) {
+          setError("Database connection timed out.");
+        }
+      }
+    }, 8000);
+
     if (!isConfigured || !supabase) {
-      console.warn("Book Haraj Kiosk: Supabase not configured. Showing config screen.");
       setLoading(false);
       return;
     }
 
-    const fetchReviews = async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('reviews')
-          .select('*')
-          .order('timestamp', { ascending: false })
-          .limit(50);
-        
-        if (fetchError) throw fetchError;
-        if (data) setReviews(data as Review[]);
-      } catch (err: any) {
-        console.error("Fetch error:", err);
-        if (err.code !== 'PGRST116') {
-          setError(err.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReviews();
 
-    const channel = supabase
-      .channel('public:reviews')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews' }, (payload) => {
-        const newReview = payload.new as Review;
-        setReviews(prev => [newReview, ...prev].slice(0, 50));
-      })
-      .subscribe();
+    const pollInterval = setInterval(fetchReviews, 20000);
 
+    try {
+      const channel = supabase
+        .channel('public:reviews')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => {
+          fetchReviews(); // Re-fetch on any change for consistency
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(pollInterval);
+      };
+    } catch (e) {
+      console.warn("Realtime error:", e);
+      return () => clearInterval(pollInterval);
+    }
+  }, [fetchReviews]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'display') {
       setIsDisplayMode(true);
@@ -71,20 +115,12 @@ const App: React.FC = () => {
       setIsRemoteMode(true);
       setStep(KioskStep.CAMERA);
     }
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const resetKiosk = useCallback(() => {
-    if (isRemoteMode) {
-      setStep(KioskStep.CAMERA);
-    } else {
-      setStep(KioskStep.HOME);
-    }
+    setStep(KioskStep.HOME);
     setCurrentReview({});
-  }, [isRemoteMode]);
+  }, []);
 
   const handleStart = () => setStep(KioskStep.CAMERA);
   const handlePhotoCapture = (photo: string) => {
@@ -103,20 +139,20 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert([newReview])
-      .select();
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert([newReview])
+        .select();
 
-    if (error) {
-      console.error("Error saving review:", error);
-      alert("Failed to save review. Please check your database connection.");
-      return;
-    }
-
-    if (data && data[0]) {
-      setCurrentReview(data[0]);
-      setStep(KioskStep.THANKS);
+      if (error) throw error;
+      if (data && data[0]) {
+        setCurrentReview(data[0]);
+        setStep(KioskStep.THANKS);
+        fetchReviews();
+      }
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message}`);
     }
   };
 
@@ -129,39 +165,20 @@ const App: React.FC = () => {
 
   if (!isConfigured) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617] text-white overflow-y-auto">
-        <div className="w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-8 border border-amber-500/20">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-black uppercase tracking-tighter mb-4">Configuration Not Found</h1>
-        <div className="text-slate-400 max-w-sm text-sm leading-relaxed mb-8 space-y-6">
-          <p>This is likely because your environment variables are not yet "baked" into the build. Please Redeploy in Dokploy.</p>
-          
-          <div className="bg-slate-900/50 border border-white/5 p-5 rounded-2xl text-left">
-            <h4 className="text-slate-200 font-black text-[10px] uppercase tracking-widest mb-3">Required Settings:</h4>
-            <ul className="text-[11px] text-slate-400 space-y-3 font-medium">
-              <li>01. Set <code className="text-white">VITE_SUPABASE_URL</code></li>
-              <li>02. Set <code className="text-white">VITE_SUPABASE_ANON_KEY</code></li>
-              <li>03. Click <b>Redeploy</b> in your dashboard.</li>
-            </ul>
-          </div>
+      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617] text-white">
+        <h1 className="text-2xl font-black uppercase mb-4">Connection Required</h1>
+        <p className="text-slate-400 mb-8">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.</p>
+        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest">Retry</button>
+      </div>
+    );
+  }
 
-          <button onClick={() => setShowDiagnostics(!showDiagnostics)} className="text-[#ffb83d] text-[10px] font-black uppercase tracking-widest underline underline-offset-4">
-            {showDiagnostics ? 'Hide Data' : 'Debug Environment'}
-          </button>
-          
-          {showDiagnostics && (
-            <div className="mt-4 p-4 bg-black rounded-xl text-left font-mono text-[9px] text-slate-500 overflow-x-auto border border-white/5">
-              Source Detection: {typeof (import.meta as any).env !== 'undefined' ? 'import.meta present' : 'import.meta missing'}<br/>
-              URL Status: {String(isConfigured)}
-            </div>
-          )}
-        </div>
-        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
-          Refresh Page
-        </button>
+  if (error && reviews.length === 0 && !loading) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617] text-white">
+        <h2 className="text-xl font-black uppercase mb-2">Database Error</h2>
+        <p className="text-slate-500 text-xs mb-8 max-w-sm">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Refresh</button>
       </div>
     );
   }
@@ -169,7 +186,12 @@ const App: React.FC = () => {
   if (isDisplayMode) {
     return (
       <div className="h-full w-full relative kiosk-bg overflow-hidden flex flex-col text-slate-100">
-        <ReviewWall reviews={reviews} fullScreen singleReviewId={singleReviewId} />
+        <ReviewWall 
+          reviews={reviews} 
+          fullScreen 
+          singleReviewId={singleReviewId} 
+          onDeleteAll={handleDeleteAll}
+        />
         <button 
           onClick={() => {
             setIsDisplayMode(false);
@@ -177,7 +199,7 @@ const App: React.FC = () => {
             url.searchParams.delete('mode');
             window.history.pushState({}, '', url.toString());
           }}
-          className="absolute top-6 right-6 px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10"
+          className="absolute top-6 right-6 px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10 backdrop-blur-md z-50 hover:bg-white/20 transition-colors"
         >
           Exit View
         </button>
@@ -197,22 +219,13 @@ const App: React.FC = () => {
         {loading ? (
           <div className="flex flex-col items-center gap-6 animate-fade-in">
             <div className="w-16 h-16 border-4 border-[#ffb83d] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm font-black text-[#ffb83d] uppercase tracking-[0.3em]">Connecting to Haraj 3.0...</p>
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && (
-              <HomeView onStart={handleStart} onToggleMode={() => setIsDisplayMode(true)} />
-            )}
-            {step === KioskStep.CAMERA && (
-              <CameraView onCapture={handlePhotoCapture} onCancel={resetKiosk} isRemote={isRemoteMode} />
-            )}
-            {step === KioskStep.FORM && (
-              <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />
-            )}
-            {step === KioskStep.THANKS && (
-              <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} reviewId={currentReview.id} />
-            )}
+            {step === KioskStep.HOME && <HomeView onStart={handleStart} onToggleMode={() => setIsDisplayMode(true)} />}
+            {step === KioskStep.CAMERA && <CameraView onCapture={handlePhotoCapture} onCancel={resetKiosk} isRemote={isRemoteMode} />}
+            {step === KioskStep.FORM && <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
+            {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} reviewId={currentReview.id} />}
           </>
         )}
       </main>

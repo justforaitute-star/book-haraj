@@ -6,9 +6,10 @@ interface ReviewWallProps {
   reviews: Review[];
   fullScreen?: boolean;
   singleReviewId?: string | null;
+  onDeleteAll?: () => void;
 }
 
-const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null }) => {
+const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null, onDeleteAll }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number | null>(null);
   const scrollPosRef = useRef(0);
@@ -72,35 +73,40 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
       </div>
 
       {fullScreen && (
-        <div className="relative z-20 w-full pt-4 pb-4 px-6 md:px-12 animate-fade-in flex-shrink-0 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-4 md:gap-6">
+        <div className="relative z-20 w-full pt-6 pb-6 px-12 animate-fade-in flex-shrink-0 bg-[#020617]/90 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            {onDeleteAll && !singleReviewId && (
+              <button 
+                onClick={onDeleteAll}
+                className="mr-6 p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 transition-all flex items-center gap-2 group"
+                title="Admin: Delete All Reviews"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden group-hover:inline">Clear Feed</span>
+              </button>
+            )}
             <div className="flex flex-col items-start">
-              <div className="flex gap-1 mb-1">
-                 <div className="w-1.5 h-1.5 bg-[#ffb83d] rounded-sm"></div>
-                 <div className="w-1.5 h-1.5 bg-slate-700 rounded-sm"></div>
-              </div>
-              <h1 className="text-xl md:text-3xl font-[800] text-slate-100 tracking-tight uppercase leading-none">
+              <h1 className="text-3xl font-[900] text-slate-100 tracking-tighter uppercase leading-none italic">
                 {singleReviewId ? 'YOUR' : 'THE'} <span className="text-[#ffb83d]">{singleReviewId ? 'REVIEW' : 'FEED'}</span>
               </h1>
-            </div>
-            <div className="h-8 w-px bg-white/10 hidden md:block"></div>
-            <div className="items-center gap-2 hidden md:flex">
-               <span className="w-1.5 h-1.5 rounded-full bg-[#ffb83d] animate-pulse"></span>
-               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                 {singleReviewId ? 'PERSONAL SPOTLIGHT' : 'Book Haraj 3.0 Live'}
-               </p>
+              <div className="flex items-center gap-2 mt-2">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">LIVE SYNC ACTIVE</p>
+              </div>
             </div>
           </div>
 
           {!singleReviewId && reviews.length > 0 && (
-            <div className="flex items-center gap-3 bg-white/5 px-4 md:px-6 py-2 rounded-xl border border-white/10 shadow-lg">
+            <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10 shadow-2xl">
               <div className="text-right">
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">OVERALL</p>
-                <p className="text-[10px] font-bold text-white uppercase tracking-tight leading-none">RATING</p>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1 opacity-60">AVG VISITOR</p>
+                <p className="text-[11px] font-black text-white uppercase tracking-tighter leading-none">RATING</p>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[#ffb83d] text-xl md:text-2xl font-black">{averageRating}</span>
-                <span className="text-[#ffb83d] text-lg">★</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[#ffb83d] text-3xl font-black">{averageRating}</span>
+                <span className="text-[#ffb83d] text-2xl">★</span>
               </div>
             </div>
           )}
@@ -109,47 +115,45 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
 
       <div 
         ref={scrollContainerRef}
-        className={`w-full flex-1 overflow-y-auto no-scrollbar z-10 pt-8 px-6 md:px-10 ${singleReviewId ? 'flex items-center justify-center' : ''}`}
+        className={`w-full flex-1 overflow-y-auto no-scrollbar z-10 pt-12 px-10 ${singleReviewId ? 'flex items-center justify-center' : ''}`}
       >
         {displayReviews.length > 0 ? (
-          <div className={`${singleReviewId ? 'max-w-md w-full' : 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-8 md:gap-12 max-w-[1800px]'} mx-auto pb-96`}>
+          <div className={`${singleReviewId ? 'max-w-md w-full' : 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-12 max-w-[1800px]'} mx-auto pb-96`}>
             {displayReviews.map((review, index) => {
               const overallRating = typeof review.ratings === 'object' ? review.ratings.overall : (review as any).rating || 5;
 
               return (
               <div 
                 key={`${review.id}-${index}`} 
-                className={`break-inside-avoid mb-8 md:mb-12 group relative bg-slate-900/40 backdrop-blur-md rounded-[24px] shadow-2xl border border-white/5 overflow-hidden flex flex-col transition-all hover:scale-[1.01] animate-fade-in-up`}
+                className={`break-inside-avoid mb-12 group relative bg-slate-900/40 backdrop-blur-md rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden flex flex-col transition-all hover:scale-[1.02] animate-fade-in-up`}
                 style={{ 
-                  animationDelay: `${(index % 8) * 80}ms`,
-                  animation: singleReviewId ? 'none' : `float ${8 + (index % 4)}s ease-in-out infinite alternate`,
+                  animationDelay: `${(index % 8) * 100}ms`,
                 }}
               >
-                <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
+                <div className="relative aspect-[4/5] overflow-hidden bg-slate-950">
                   <img 
                     src={review.photo} 
                     alt={review.name} 
-                    className="w-full h-full object-cover opacity-90 transition-transform duration-[4000ms] group-hover:scale-105"
+                    className="w-full h-full object-cover opacity-90 transition-transform duration-[6000ms] group-hover:scale-110"
                   />
-                  <div className="absolute top-4 left-4 bg-[#ffb83d] px-3 py-1.5 rounded-lg shadow-xl flex items-center gap-1.5 border border-[#ffb83d]">
-                    <span className="text-slate-900 text-sm leading-none">★</span>
-                    <span className="font-bold text-slate-900 text-sm">{overallRating}.0</span>
+                  <div className="absolute top-5 left-5 bg-[#ffb83d] px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border-2 border-slate-900">
+                    <span className="text-slate-950 text-sm leading-none font-black">★ {overallRating}.0</span>
                   </div>
                 </div>
 
-                <div className="p-8 md:p-10">
-                  <div className="w-1.5 h-1.5 bg-[#ffb83d] rounded-sm mb-6"></div>
-                  <p className="text-white text-lg md:text-xl leading-[1.6] font-medium tracking-tight mb-8">
+                <div className="p-10">
+                  <div className="w-4 h-1 bg-[#ffb83d] rounded-full mb-6"></div>
+                  <p className="text-white text-xl leading-[1.6] font-medium tracking-tight mb-10 italic">
                     "{review.comment || 'Amazing experience at the expo!'}"
                   </p>
                   
-                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                  <div className="flex items-center justify-between pt-8 border-t border-white/5">
                     <div className="min-w-0">
-                      <h4 className="font-bold text-slate-200 text-base md:text-lg uppercase tracking-tight truncate">{review.name}</h4>
-                      <p className="text-[10px] font-bold text-[#ffb83d]/70 uppercase tracking-widest mt-1">Visitor</p>
+                      <h4 className="font-black text-slate-100 text-lg uppercase tracking-tighter truncate">{review.name}</h4>
+                      <p className="text-[10px] font-black text-[#ffb83d]/50 uppercase tracking-[0.4em] mt-1">VISITOR FEEDBACK</p>
                     </div>
-                    <div className="flex-shrink-0 w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/5">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0 w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                        </svg>
                     </div>
@@ -160,21 +164,17 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center py-20 animate-fade-in">
-            <div className="w-16 h-16 bg-slate-900 rounded-2xl shadow-inner flex items-center justify-center mb-8 border border-white/5">
-               <div className="w-4 h-4 bg-[#ffb83d] rounded-sm animate-pulse"></div>
+            <div className="w-20 h-20 bg-slate-900 rounded-[30px] shadow-2xl flex items-center justify-center mb-8 border border-white/5 animate-pulse">
+               <div className="w-6 h-6 bg-[#ffb83d] rounded-sm"></div>
             </div>
-            <h3 className="text-xl font-bold text-slate-400 uppercase tracking-widest">
-              {singleReviewId ? 'REVIEW NOT FOUND' : 'THE WALL IS EMPTY'}
+            <h3 className="text-xl font-black text-slate-600 uppercase tracking-[0.6em]">
+              WAITING FOR UPDATES
             </h3>
           </div>
         )}
       </div>
 
       <style>{`
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          100% { transform: translateY(-15px); }
-        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
