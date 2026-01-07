@@ -24,28 +24,33 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
   const [currentStep, setCurrentStep] = useState(0);
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
-  const [lastRatedValue, setLastRatedValue] = useState<number | null>(null);
+  const [clickedStar, setClickedStar] = useState<number | null>(null);
+  
+  // Initialize all ratings to 0 so stars start as grey
   const [ratings, setRatings] = useState<DetailedRatings>({
-    books: 5,
-    venue: 5,
-    collection: 5,
-    authors: 5,
-    food: 5,
-    artibhition: 5,
-    coffee: 5,
-    overall: 5,
+    books: 0,
+    venue: 0,
+    collection: 0,
+    authors: 0,
+    food: 0,
+    artibhition: 0,
+    coffee: 0,
+    overall: 0,
   });
 
   const totalSteps = RATING_CATEGORIES.length + 2; 
 
   const handleRatingChange = (category: keyof DetailedRatings, value: number) => {
     setRatings(prev => ({ ...prev, [category]: value }));
-    setLastRatedValue(value);
-    // Auto-advance
+    setClickedStar(value);
+    
+    // Reset click animation flag after a moment
+    setTimeout(() => setClickedStar(null), 400);
+    
+    // Auto-advance after animation
     setTimeout(() => {
       nextStep();
-      setLastRatedValue(null);
-    }, 400);
+    }, 600);
   };
 
   const nextStep = () => {
@@ -67,55 +72,52 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
       setCurrentStep(0);
       return;
     }
-    // Comment is optional, so we submit regardless of its content
     onSubmit({ name, ratings, comment: comment.trim() });
   };
 
-  const renderProgress = () => (
-    <div className="flex gap-2 mb-10 justify-center">
-      {Array.from({ length: totalSteps }).map((_, i) => (
-        <div 
-          key={i} 
-          className={`h-2 transition-all duration-700 rounded-full ${
-            i <= currentStep ? 'bg-[#ffb83d] w-10 shadow-[0_0_15px_rgba(255,184,61,0.4)]' : 'bg-slate-800 w-3'
-          }`}
-        />
-      ))}
-    </div>
-  );
-
   return (
-    <div className={`bg-slate-950 shadow-[0_80px_160px_-40px_rgba(0,0,0,0.8)] flex flex-col w-full max-w-4xl ${isRemote ? 'h-full rounded-none' : 'h-[90vh] rounded-[40px] border-[12px] border-slate-900'} overflow-hidden animate-fade-in relative`}>
+    <div className={`bg-[#050a18] flex flex-col w-full max-w-4xl shadow-2xl relative ${isRemote ? 'h-full rounded-none' : 'h-[85vh] rounded-[40px] border-[1px] border-white/5'} overflow-hidden animate-fade-in`}>
       
-      {/* Photo Header */}
-      <div className="h-[18%] relative flex-shrink-0 group overflow-hidden bg-black">
-        <img src={photo} alt="Your Capture" className="h-full w-full object-cover opacity-40 grayscale transition-all duration-1000 group-hover:grayscale-0" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent flex flex-col justify-end p-6">
-          <p className="text-[#ffb83d] text-[10px] font-black uppercase tracking-[0.4em] animate-slide-reveal">Step {currentStep + 1} of {totalSteps}</p>
-        </div>
-        
+      {/* Header Info: Step Counter & Close Button */}
+      <div className="absolute top-8 left-10 right-10 flex justify-between items-center z-30">
+        <p className="text-[#ffb83d] text-[11px] font-black uppercase tracking-[0.3em]">
+          STEP {currentStep + 1} OF {totalSteps}
+        </p>
         <button 
           onClick={onCancel} 
-          className="absolute top-6 right-6 w-12 h-12 bg-white/5 hover:bg-white/10 backdrop-blur-3xl rounded-[14px] flex items-center justify-center text-white transition-all border border-white/10 z-30 hover:rotate-90"
+          className="w-10 h-10 bg-white/5 hover:bg-white/10 backdrop-blur-3xl rounded-full flex items-center justify-center text-white/60 transition-all border border-white/10"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      {/* Slider Body */}
-      <div className="flex-1 px-8 md:px-16 py-10 flex flex-col justify-center relative">
-        {renderProgress()}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-12 pb-12 pt-20">
+        
+        {/* Dash Progress Bar */}
+        <div className="flex gap-2.5 mb-20">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div 
+              key={i} 
+              className={`h-[4px] w-12 rounded-full transition-all duration-500 ${
+                i <= currentStep ? 'bg-[#ffb83d] shadow-[0_0_15px_rgba(255,184,61,0.6)]' : 'bg-slate-800'
+              }`}
+            />
+          ))}
+        </div>
 
-        <div className="min-h-[340px] flex flex-col justify-center transition-all duration-500 transform" key={currentStep}>
+        <div className="w-full flex flex-col items-center transition-all duration-500 transform" key={currentStep}>
           
-          {/* Step 0: Name (Required) */}
+          {/* Step 0: Name */}
           {currentStep === 0 && (
-            <div className="space-y-8 text-center animate-fade-in-up">
-              <h2 className="text-slate-500 text-[12px] font-black uppercase tracking-[0.6em]">Identification</h2>
-              <h3 className="text-4xl md:text-5xl text-white font-[900] uppercase tracking-tighter leading-none">What is your name?</h3>
-              <div className="relative max-w-md mx-auto">
+            <div className="space-y-6 text-center animate-fade-in-up w-full">
+              <h2 className="text-slate-500 text-[11px] font-black uppercase tracking-[0.6em]">IDENTIFICATION</h2>
+              <h3 className="text-4xl md:text-5xl text-white font-[900] uppercase tracking-tighter leading-tight max-w-xl mx-auto">
+                What is your name?
+              </h3>
+              <div className="relative max-w-md mx-auto pt-8">
                 <input
                   type="text"
                   autoFocus
@@ -123,41 +125,40 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && name.trim() && nextStep()}
-                  placeholder="ENTER NAME"
-                  className="w-full text-center text-3xl md:text-5xl py-4 border-b-4 border-slate-900 focus:border-[#ffb83d] outline-none transition-all placeholder:text-slate-900 font-[900] uppercase tracking-tighter bg-transparent text-slate-100"
+                  placeholder="TYPE HERE..."
+                  className="w-full text-center text-3xl md:text-5xl py-4 border-b-2 border-slate-800 focus:border-[#ffb83d] outline-none transition-all placeholder:text-slate-800 font-[900] uppercase tracking-tighter bg-transparent text-slate-100"
                 />
-                {!name.trim() && (
-                  <p className="absolute -bottom-6 left-0 right-0 text-[10px] text-slate-700 font-bold tracking-widest uppercase animate-pulse">Required to continue</p>
-                )}
               </div>
             </div>
           )}
 
-          {/* Steps 1-8: Ratings (Mandatory selection to advance, though they have default values) */}
+          {/* Steps 1-8: Rating Categories */}
           {currentStep > 0 && currentStep <= RATING_CATEGORIES.length && (
-            <div className="space-y-12 text-center animate-fade-in-up">
-              <h2 className="text-slate-500 text-[12px] font-black uppercase tracking-[0.6em] animate-slide-reveal">
+            <div className="space-y-12 text-center animate-fade-in-up w-full">
+              <h2 className="text-slate-500 text-[11px] font-black uppercase tracking-[0.6em]">
                 {RATING_CATEGORIES[currentStep - 1].label}
               </h2>
-              <h3 className="text-3xl md:text-5xl text-white font-[900] uppercase tracking-tighter leading-snug max-w-2xl mx-auto">
+              <h3 className="text-4xl md:text-5xl text-white font-[900] uppercase tracking-tighter leading-tight max-w-2xl mx-auto">
                 {RATING_CATEGORIES[currentStep - 1].question}
               </h3>
               
-              <div className="flex justify-center gap-4 md:gap-8">
+              <div className="flex justify-center gap-6 md:gap-8 pt-4">
                 {[1, 2, 3, 4, 5].map((star) => {
-                  const isActive = star <= ratings[RATING_CATEGORIES[currentStep - 1].id as keyof DetailedRatings];
-                  const isJustClicked = lastRatedValue === star;
+                  const currentCategory = RATING_CATEGORIES[currentStep - 1].id as keyof DetailedRatings;
+                  const currentVal = ratings[currentCategory];
+                  const isSelected = star <= currentVal;
+                  const isAnimating = clickedStar === star;
                   
                   return (
                     <button
                       key={star}
                       type="button"
-                      onClick={() => handleRatingChange(RATING_CATEGORIES[currentStep - 1].id as keyof DetailedRatings, star)}
-                      className={`text-6xl md:text-8xl transition-all transform hover:scale-125 active:scale-90 ${
-                        isActive 
-                          ? 'text-[#ffb83d] drop-shadow-[0_0_25px_rgba(255,184,61,0.6)]' 
-                          : 'text-slate-900'
-                      } ${isJustClicked ? 'animate-star-pop' : ''}`}
+                      onClick={() => handleRatingChange(currentCategory, star)}
+                      className={`text-7xl md:text-8xl transition-all duration-300 transform hover:scale-110 active:scale-90 ${
+                        isSelected 
+                          ? 'text-[#ffb83d] drop-shadow-[0_0_25px_rgba(255,184,61,0.4)]' 
+                          : 'text-slate-800 hover:text-slate-700'
+                      } ${isAnimating ? 'animate-star-pop' : ''}`}
                     >
                       ★
                     </button>
@@ -167,75 +168,57 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
             </div>
           )}
 
-          {/* Final Step: Feedback (EXPLICITLY OPTIONAL) */}
+          {/* Step 9: Final Feedback */}
           {currentStep === totalSteps - 1 && (
-            <div className="space-y-10 text-center animate-fade-in-up">
-              <div className="space-y-2">
-                <h2 className="text-slate-500 text-[12px] font-black uppercase tracking-[0.6em]">The Final Word</h2>
-                <div className="inline-flex items-center gap-2 px-4 py-1 bg-[#ffb83d]/10 rounded-full border border-[#ffb83d]/20 animate-pulse">
-                  <p className="text-[#ffb83d] text-[10px] font-black uppercase tracking-widest">Optional</p>
-                </div>
+            <div className="space-y-8 text-center animate-fade-in-up w-full">
+              <h2 className="text-slate-500 text-[11px] font-black uppercase tracking-[0.6em]">THE FINAL WORD</h2>
+              <h3 className="text-4xl md:text-5xl text-white font-[900] uppercase tracking-tighter leading-tight max-w-xl mx-auto">
+                Any final thoughts?
+              </h3>
+              <div className="max-w-xl mx-auto w-full pt-4">
+                <textarea
+                  rows={2}
+                  autoFocus
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="OPTIONAL FEEDBACK..."
+                  className="w-full text-center text-xl md:text-2xl py-4 border-b-2 border-slate-800 focus:border-[#ffb83d] outline-none transition-all placeholder:text-slate-800 resize-none bg-transparent font-bold tracking-tight text-slate-100"
+                />
               </div>
-              <h3 className="text-3xl md:text-5xl text-white font-[900] uppercase tracking-tighter leading-none">Any final thoughts?</h3>
-              <textarea
-                rows={2}
-                autoFocus
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="TYPE HERE OR SKIP TO SUBMIT..."
-                className="w-full text-center text-xl md:text-3xl py-4 border-b-4 border-slate-900 focus:border-[#ffb83d] outline-none transition-all placeholder:text-slate-900 resize-none bg-transparent font-bold tracking-tight text-slate-200"
-              />
-              {!comment.trim() && (
-                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">You can leave this blank</p>
-              )}
             </div>
           )}
         </div>
+      </div>
 
-        {/* Navigation Bar */}
-        <div className="flex items-center justify-between mt-12 gap-6 relative z-20">
-          <button
-            onClick={prevStep}
-            disabled={currentStep === 0}
-            className={`flex-1 py-6 rounded-2xl font-[900] uppercase tracking-widest transition-all text-[10px] flex items-center justify-center gap-3 ${
-              currentStep === 0 ? 'opacity-0 pointer-events-none' : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7 7-7" />
-            </svg>
-            Previous
-          </button>
+      {/* Navigation Footer */}
+      <div className="px-10 pb-12 flex gap-6">
+        <button
+          onClick={prevStep}
+          disabled={currentStep === 0}
+          className={`flex-1 py-6 rounded-[18px] font-black uppercase tracking-widest transition-all text-[11px] flex items-center justify-center gap-3 ${
+            currentStep === 0 ? 'opacity-0 pointer-events-none' : 'bg-[#101828] text-slate-500 hover:text-white'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7 7-7" />
+          </svg>
+          PREVIOUS
+        </button>
 
-          {currentStep === totalSteps - 1 ? (
-            <button
-              onClick={() => handleSubmit()}
-              className="flex-[2] py-8 bg-white text-slate-950 rounded-2xl font-[900] shadow-[0_20px_40px_rgba(255,184,61,0.2)] hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center gap-4 uppercase tracking-tighter relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 animate-shimmer opacity-20 group-hover:opacity-40"></div>
-              <span className="relative z-10">
-                {comment.trim() ? 'SUBMIT REVIEW' : 'SKIP & SUBMIT'}
-              </span>
-              <div className="w-10 h-10 bg-[#ffb83d] rounded-[6px] flex items-center justify-center group-hover:rotate-[360deg] transition-transform duration-700 relative z-10">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </button>
-          ) : (
-            <button
-              onClick={nextStep}
-              disabled={currentStep === 0 && !name.trim()}
-              className="flex-1 py-6 bg-[#ffb83d] text-slate-950 rounded-2xl font-[900] shadow-xl hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-[10px] disabled:opacity-20 relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 animate-shimmer opacity-20"></div>
-              <span className="relative z-10">Next</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 relative z-10 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
-        </div>
+        <button
+          onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
+          disabled={currentStep === 0 && !name.trim()}
+          className={`flex-1 py-6 rounded-[18px] font-black uppercase tracking-widest transition-all text-[11px] flex items-center justify-center gap-3 ${
+            currentStep === totalSteps - 1 || (currentStep > 0 && currentStep <= RATING_CATEGORIES.length && ratings[RATING_CATEGORIES[currentStep-1].id as keyof DetailedRatings] > 0)
+            ? 'bg-[#ffb83d] text-[#050a18] shadow-lg shadow-[#ffb83d]/20 hover:scale-[1.02]' 
+            : 'bg-slate-800 text-slate-600'
+          }`}
+        >
+          {currentStep === totalSteps - 1 ? 'SUBMIT' : 'NEXT'}
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
     </div>
   );

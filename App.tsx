@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { KioskStep, Review, DetailedRatings } from './types.ts';
 import HomeView from './components/HomeView.tsx';
@@ -22,6 +23,7 @@ const App: React.FC = () => {
   const [currentReview, setCurrentReview] = useState<Partial<Review>>({});
   const [isDisplayMode, setIsDisplayMode] = useState(false);
   const [isRemoteMode, setIsRemoteMode] = useState(false);
+  const [singleReviewId, setSingleReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -36,6 +38,9 @@ const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'display') {
       setIsDisplayMode(true);
+    } else if (params.get('mode') === 'review') {
+      setIsDisplayMode(true);
+      setSingleReviewId(params.get('id'));
     } else if (params.get('mode') === 'remote') {
       setIsRemoteMode(true);
       setStep(KioskStep.CAMERA);
@@ -70,12 +75,13 @@ const App: React.FC = () => {
     const updatedReviews = [newReview, ...reviews].slice(0, 50);
     setReviews(updatedReviews);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReviews));
+    setCurrentReview(newReview); // Keep the full object so ThanksView can use the ID
     setStep(KioskStep.THANKS);
   };
 
   useEffect(() => {
     if (step === KioskStep.THANKS) {
-      const timer = setTimeout(resetKiosk, 6000);
+      const timer = setTimeout(resetKiosk, 12000); // Increased time to allow QR scanning
       return () => clearTimeout(timer);
     }
   }, [step, resetKiosk]);
@@ -83,18 +89,20 @@ const App: React.FC = () => {
   if (isDisplayMode) {
     return (
       <div className="h-full w-full relative kiosk-bg overflow-hidden flex flex-col text-slate-100">
-        <ReviewWall reviews={reviews} fullScreen />
+        <ReviewWall reviews={reviews} fullScreen singleReviewId={singleReviewId} />
         
         <button 
           onClick={() => {
             setIsDisplayMode(false);
+            setSingleReviewId(null);
             const url = new URL(window.location.href);
             url.searchParams.delete('mode');
+            url.searchParams.delete('id');
             window.history.pushState({}, '', url.toString());
           }}
           className="absolute top-6 right-6 px-4 py-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-full text-slate-400 text-[10px] font-bold uppercase tracking-widest border border-white/10 opacity-0 hover:opacity-100 transition-opacity"
         >
-          Close Wall
+          {singleReviewId ? 'Close Review' : 'Close Wall'}
         </button>
       </div>
     );
@@ -127,7 +135,7 @@ const App: React.FC = () => {
           <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />
         )}
         {step === KioskStep.THANKS && (
-          <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} />
+          <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} reviewId={currentReview.id} />
         )}
       </main>
 
