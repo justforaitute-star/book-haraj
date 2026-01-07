@@ -8,77 +8,75 @@ interface ThanksViewProps {
 }
 
 const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, reviewId }) => {
-  const qrUrl = useMemo(() => {
-    if (!reviewId) return '';
-    const url = new URL(window.location.href);
-    url.searchParams.set('mode', 'review');
-    url.searchParams.set('id', reviewId);
-    return url.toString();
-  }, [reviewId]);
+  const galleryUrl = useMemo(() => {
+    // In a real app, this would be a link to the photographer's database/gallery.
+    // For this demo, we can use a placeholder or the existing review link.
+    return "https://book-haraj-gallery.expo.com"; 
+  }, []);
 
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}&bgcolor=ffffff&color=020617`;
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(galleryUrl)}&bgcolor=ffffff&color=020617`;
 
   return (
-    <div className={`text-center flex flex-col items-center px-10 ${isRemote ? 'py-8' : 'py-4'}`}>
-      <div className={`${isRemote ? 'w-16 h-16 mb-6' : 'w-32 h-32 mb-8'} bg-white rounded-[20px] flex items-center justify-center shadow-[0_40px_80px_-20px_rgba(255,184,61,0.3)] relative animate-fade-in-up`}>
-        <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#ffb83d] rounded-[8px] animate-star-pop shadow-lg flex items-center justify-center">
-           <span className="text-slate-900 text-xs font-black">✓</span>
+    <div className={`text-center flex flex-col items-center px-10 ${isRemote ? 'py-8' : 'py-4'} animate-fade-in`}>
+      
+      {/* Success Badge */}
+      <div className={`${isRemote ? 'w-20 h-20 mb-8' : 'w-32 h-32 mb-10'} bg-white rounded-3xl flex items-center justify-center shadow-[0_20px_60px_rgba(255,184,61,0.4)] relative animate-fade-in-up`}>
+        <div className="absolute -top-3 -right-3 w-10 h-10 bg-[#ffb83d] rounded-xl shadow-lg flex items-center justify-center border-4 border-[#020617]">
+           <span className="text-slate-900 text-sm font-black">✓</span>
         </div>
-        <svg xmlns="http://www.w3.org/2000/svg" className={`${isRemote ? 'h-8 w-8' : 'h-16 w-16'} text-slate-900 animate-glow-pulse`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className={`${isRemote ? 'h-10 w-10' : 'h-16 w-16'} text-slate-900`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
         </svg>
       </div>
       
-      <div className="overflow-hidden mb-4">
-        <h2 className={`${isRemote ? 'text-4xl' : 'text-6xl'} font-[900] text-slate-100 uppercase tracking-tighter animate-slide-reveal`}>
-          STORY <span className="text-[#ffb83d]">POSTED!</span>
+      <div className="overflow-hidden mb-6">
+        <h2 className={`${isRemote ? 'text-4xl' : 'text-6xl'} font-[900] text-white uppercase tracking-tight leading-none animate-slide-reveal`}>
+          REVIEW <span className="text-[#ffb83d]">POSTED!</span>
         </h2>
       </div>
 
-      <p className={`${isRemote ? 'text-sm' : 'text-lg'} text-slate-500 max-w-sm mx-auto mb-8 font-bold uppercase tracking-widest animate-fade-in`} style={{ animationDelay: '0.4s' }}>
-        YOUR FEEDBACK IS NOW PART OF THE BOOK HARAJ 3.0 WALL.
+      <p className={`${isRemote ? 'text-sm' : 'text-xl'} text-slate-300 max-w-sm mx-auto mb-10 font-medium leading-relaxed opacity-90 animate-fade-in`} style={{ animationDelay: '0.4s' }}>
+        Thank you for your feedback! Your review has been added to the Book Haraj 3.0 Live Wall.
       </p>
 
-      {/* QR Code Section */}
-      {reviewId && (
-        <div className="flex flex-col items-center gap-6 mb-12 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-          <div className="p-3 bg-white rounded-[24px] shadow-2xl scale-110">
-            <img src={qrCodeImageUrl} alt="Review QR Code" className="w-32 h-32 md:w-40 md:h-40" />
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <p className="text-[#ffb83d] text-[11px] font-black uppercase tracking-[0.4em]">SCAN TO SEE YOUR REVIEW</p>
-            <div className="h-[2px] w-12 bg-white/10 rounded-full mt-2"></div>
-          </div>
+      {/* PHOTO DOWNLOAD SECTION - NEW REQUIREMENT */}
+      <div className="flex flex-col items-center gap-8 mb-12 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+        <div className="relative group p-4 bg-white rounded-[32px] shadow-2xl transition-transform hover:scale-105">
+          <img src={qrCodeImageUrl} alt="Download Gallery QR" className="w-40 h-40 md:w-48 md:h-48" />
+          <div className="absolute -inset-2 border-2 border-white/20 rounded-[40px] animate-pulse pointer-events-none"></div>
         </div>
-      )}
-
-      <div className={`${isRemote ? 'w-56' : 'w-[400px]'} h-3 bg-slate-900 rounded-full overflow-hidden relative border border-white/5 shadow-inner p-1 animate-fade-in`} style={{ animationDelay: '0.8s' }}>
-        <div className="h-full bg-[#ffb83d] origin-left animate-loading-bar shadow-[0_0_30px_rgba(255,184,61,0.8)] rounded-full relative">
-           <div className="absolute inset-0 animate-shimmer"></div>
+        
+        <div className="space-y-3">
+          <h4 className="text-[#ffb83d] text-lg font-[900] uppercase tracking-wide">SCAN TO GET YOUR PHOTOS</h4>
+          <p className="text-slate-500 text-[11px] font-bold uppercase tracking-[0.3em]">Official Expo Gallery Access</p>
         </div>
       </div>
+
+      {/* Progress/Timeout Bar */}
+      <div className={`${isRemote ? 'w-64' : 'w-[450px]'} h-3 bg-slate-900/50 rounded-full overflow-hidden relative border border-white/10 p-0.5 animate-fade-in`} style={{ animationDelay: '0.8s' }}>
+        <div className="h-full bg-[#ffb83d] origin-left animate-loading-bar rounded-full shadow-[0_0_15px_rgba(255,184,61,0.6)]"></div>
+      </div>
       
-      <p className="mt-8 text-slate-700 text-[9px] uppercase tracking-[1em] font-black animate-pulse">
-        REFRESHING STATION
+      <p className="mt-8 text-slate-600 text-[10px] uppercase tracking-[0.5em] font-black animate-pulse">
+        STATION RESETTING SOON
       </p>
 
       {isRemote && (
         <button
           onClick={onFinish}
-          className="mt-12 px-16 py-5 bg-white text-slate-900 rounded-[14px] font-[900] shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-tight relative overflow-hidden group"
+          className="mt-12 px-16 py-6 bg-white text-slate-900 rounded-2xl font-black shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-tighter"
         >
-          <div className="absolute inset-0 animate-shimmer opacity-20"></div>
-          <span className="relative z-10">POST ANOTHER</span>
+          SUBMIT ANOTHER
         </button>
       )}
       
       {!isRemote && (
         <button
           onClick={onFinish}
-          className="mt-12 px-10 py-5 text-slate-400 font-[900] hover:bg-white/5 rounded-[14px] transition-all text-[10px] uppercase tracking-[0.4em] flex items-center gap-4 group"
+          className="mt-12 px-8 py-4 text-slate-500 font-black hover:text-[#ffb83d] transition-all text-[11px] uppercase tracking-[0.2em] flex items-center gap-4 group"
         >
-          <div className="w-2.5 h-2.5 bg-[#ffb83d] group-hover:rotate-180 transition-transform duration-500"></div>
-          BACK TO HOME
+          <div className="w-2.5 h-2.5 bg-[#ffb83d] rounded-sm group-hover:rotate-180 transition-transform duration-500"></div>
+          RETURN TO HOME
         </button>
       )}
     </div>
