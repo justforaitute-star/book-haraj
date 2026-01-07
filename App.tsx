@@ -10,6 +10,8 @@ import Logo3 from './components/Logo3.tsx';
 import { supabase, isConfigured } from './lib/supabase.ts';
 
 const App: React.FC = () => {
+  console.log("Book Haraj Kiosk: App Component Initializing...");
+
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentReview, setCurrentReview] = useState<Partial<Review>>({});
@@ -21,7 +23,10 @@ const App: React.FC = () => {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   useEffect(() => {
+    console.log("Book Haraj Kiosk: Running initialization effect. Configured:", isConfigured);
+    
     if (!isConfigured || !supabase) {
+      console.warn("Book Haraj Kiosk: Supabase not configured. Showing config screen.");
       setLoading(false);
       return;
     }
@@ -124,65 +129,39 @@ const App: React.FC = () => {
 
   if (!isConfigured) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617]">
+      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617] text-white overflow-y-auto">
         <div className="w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-8 border border-amber-500/20">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Configuration Not Found</h1>
+        <h1 className="text-2xl font-black uppercase tracking-tighter mb-4">Configuration Not Found</h1>
         <div className="text-slate-400 max-w-sm text-sm leading-relaxed mb-8 space-y-6">
-          <p>The application is running but cannot find your database credentials. This usually means the environment variables were not available when the app was built.</p>
+          <p>This is likely because your environment variables are not yet "baked" into the build. Please Redeploy in Dokploy.</p>
           
           <div className="bg-slate-900/50 border border-white/5 p-5 rounded-2xl text-left">
-            <h4 className="text-slate-200 font-black text-[10px] uppercase tracking-widest mb-3">Checklist for Dokploy:</h4>
+            <h4 className="text-slate-200 font-black text-[10px] uppercase tracking-widest mb-3">Required Settings:</h4>
             <ul className="text-[11px] text-slate-400 space-y-3 font-medium">
-              <li className="flex gap-2">
-                <span className="text-[#ffb83d]">01.</span> 
-                <span>Verify keys are named <code className="text-white">VITE_SUPABASE_URL</code> and <code className="text-white">VITE_SUPABASE_ANON_KEY</code>.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#ffb83d]">02.</span> 
-                <span>Go to Deployments and click <b>Redeploy</b> (this is mandatory after changing keys).</span>
-              </li>
+              <li>01. Set <code className="text-white">VITE_SUPABASE_URL</code></li>
+              <li>02. Set <code className="text-white">VITE_SUPABASE_ANON_KEY</code></li>
+              <li>03. Click <b>Redeploy</b> in your dashboard.</li>
             </ul>
           </div>
 
-          <div className="pt-2">
-            <button 
-              onClick={() => setShowDiagnostics(!showDiagnostics)}
-              className="text-[#ffb83d] text-[10px] font-black uppercase tracking-widest underline decoration-2 underline-offset-4"
-            >
-              {showDiagnostics ? 'Hide Diagnostic Data' : 'View Diagnostic Data'}
-            </button>
-            
-            {showDiagnostics && (
-              <div className="mt-4 p-4 bg-black rounded-xl text-left font-mono text-[9px] text-slate-500 overflow-x-auto border border-white/5 animate-fade-in">
-                <div>User Agent: {navigator.userAgent}</div>
-                <div>Configured: {String(isConfigured)}</div>
-                <div className="mt-2 text-white/50 border-t border-white/5 pt-2">Resolution Checks:</div>
-                <div className="text-amber-500/70">
-                  - import.meta.env detection: {
-                    (() => {
-                      try { return String(!!((import.meta as any).env?.VITE_SUPABASE_URL)) }
-                      catch(e) { return 'N/A' }
-                    })()
-                  }<br/>
-                  - window object keys: {
-                    Object.keys(window).filter(k => k.includes('SUPABASE')).join(', ') || 'None'
-                  }<br/>
-                  - process.env status: {typeof process !== 'undefined' ? 'Available' : 'Missing'}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex flex-col gap-3 w-full max-w-xs">
-          <button onClick={() => window.location.reload()} className="w-full py-4 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
-            Refresh & Retry
+          <button onClick={() => setShowDiagnostics(!showDiagnostics)} className="text-[#ffb83d] text-[10px] font-black uppercase tracking-widest underline underline-offset-4">
+            {showDiagnostics ? 'Hide Data' : 'Debug Environment'}
           </button>
+          
+          {showDiagnostics && (
+            <div className="mt-4 p-4 bg-black rounded-xl text-left font-mono text-[9px] text-slate-500 overflow-x-auto border border-white/5">
+              Source Detection: {typeof (import.meta as any).env !== 'undefined' ? 'import.meta present' : 'import.meta missing'}<br/>
+              URL Status: {String(isConfigured)}
+            </div>
+          )}
         </div>
+        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
+          Refresh Page
+        </button>
       </div>
     );
   }
@@ -191,19 +170,16 @@ const App: React.FC = () => {
     return (
       <div className="h-full w-full relative kiosk-bg overflow-hidden flex flex-col text-slate-100">
         <ReviewWall reviews={reviews} fullScreen singleReviewId={singleReviewId} />
-        
         <button 
           onClick={() => {
             setIsDisplayMode(false);
-            setSingleReviewId(null);
             const url = new URL(window.location.href);
             url.searchParams.delete('mode');
-            url.searchParams.delete('id');
             window.history.pushState({}, '', url.toString());
           }}
-          className="absolute top-6 right-6 px-4 py-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-full text-slate-400 text-[10px] font-bold uppercase tracking-widest border border-white/10 opacity-0 hover:opacity-100 transition-opacity"
+          className="absolute top-6 right-6 px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10"
         >
-          {singleReviewId ? 'Close Review' : 'Close Wall'}
+          Exit View
         </button>
       </div>
     );
@@ -217,24 +193,16 @@ const App: React.FC = () => {
         </header>
       )}
 
-      <main className={`flex-1 w-full flex items-center justify-center px-6 relative z-10 overflow-hidden ${isRemoteMode ? 'pt-4' : ''}`}>
+      <main className="flex-1 w-full flex items-center justify-center px-6 relative z-10 overflow-hidden">
         {loading ? (
-          <div className="flex flex-col items-center gap-4 animate-pulse">
-            <div className="w-12 h-12 border-4 border-[#ffb83d] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Connecting to Haraj 3.0...</p>
+          <div className="flex flex-col items-center gap-6 animate-fade-in">
+            <div className="w-16 h-16 border-4 border-[#ffb83d] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-black text-[#ffb83d] uppercase tracking-[0.3em]">Connecting to Haraj 3.0...</p>
           </div>
         ) : (
           <>
             {step === KioskStep.HOME && (
-              <HomeView 
-                onStart={handleStart} 
-                onToggleMode={() => {
-                  setIsDisplayMode(true);
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('mode', 'display');
-                  window.history.pushState({}, '', url.toString());
-                }} 
-              />
+              <HomeView onStart={handleStart} onToggleMode={() => setIsDisplayMode(true)} />
             )}
             {step === KioskStep.CAMERA && (
               <CameraView onCapture={handlePhotoCapture} onCancel={resetKiosk} isRemote={isRemoteMode} />

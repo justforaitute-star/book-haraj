@@ -34,7 +34,6 @@
       scrollbar-width: none;
     }
 
-    /* Kinetic & Entry Animations */
     @keyframes fade-in-up {
       from { opacity: 0; transform: translateY(30px); filter: blur(4px); }
       to { opacity: 1; transform: translateY(0); filter: blur(0); }
@@ -77,16 +76,6 @@
     .animate-loading-bar {
       animation: loading-bar 12s linear forwards;
     }
-
-    /* High Contrast Text Utils */
-    .text-readable-header {
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-    }
-    .text-readable-body {
-      letter-spacing: 0.01em;
-      line-height: 1.6;
-    }
   </style>
 <script type="importmap">
 {
@@ -104,5 +93,7 @@
      <div class="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-[#ffb83d] opacity-[0.03] blur-[120px]"></div>
   </div>
   <div id="root" class="h-full w-full relative z-10"></div>
+  <!-- CRITICAL: Added entry script -->
+  <script type="module" src="./index.tsx"></script>
 </body>
 </html>
