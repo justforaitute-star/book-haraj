@@ -7,6 +7,8 @@ import FormView from './components/FormView.tsx';
 import ThanksView from './components/ThanksView.tsx';
 import ReviewWall from './components/ReviewWall.tsx';
 import GalleryView from './components/GalleryView.tsx';
+import LoginView from './components/LoginView.tsx';
+import AdminPanel from './components/AdminPanel.tsx';
 import Logo3 from './components/Logo3.tsx';
 import { supabase } from './lib/supabase.ts';
 
@@ -31,6 +33,8 @@ const PHOTOPRISM_API_KEY = getEnv('PHOTOPRISM_API_KEY') || '';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isPublicMode, setIsPublicMode] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentReview, setCurrentReview] = useState<Partial<Review>>({});
   const [isDisplayMode, setIsDisplayMode] = useState(false);
@@ -46,7 +50,7 @@ const App: React.FC = () => {
         .from('reviews')
         .select('*')
         .order('timestamp', { ascending: false })
-        .limit(50);
+        .limit(100);
       if (fetchError) throw fetchError;
       if (data) setReviews(data as Review[]);
     } catch (err) {
@@ -56,36 +60,39 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'display') {
-      setIsDisplayMode(true);
-    } else if (params.get('mode') === 'gallery') {
-      const fid = params.get('faceId');
-      if (fid) {
-        setGalleryFaceId(fid);
-        setStep(KioskStep.GALLERY);
+    const mode = params.get('mode');
+    
+    if (mode === 'remote' || mode === 'gallery') {
+      setIsPublicMode(true);
+      setIsAuthenticated(true);
+      
+      if (mode === 'gallery') {
+        const fid = params.get('faceId');
+        if (fid) {
+          setGalleryFaceId(fid);
+          setStep(KioskStep.GALLERY);
+        }
+      } else if (mode === 'remote') {
+        setIsRemoteMode(true);
+        setStep(KioskStep.CAMERA);
       }
-    } else if (params.get('mode') === 'remote') {
-      setIsRemoteMode(true);
-      setStep(KioskStep.CAMERA);
+    } else if (mode === 'display') {
+      setIsDisplayMode(true);
     }
+
     fetchReviews();
   }, [fetchReviews]);
 
-  // PhotoPrism Face Recognition Polling
   const identifyFaceWithPhotoPrism = async (base64Photo: string): Promise<string> => {
     if (!PHOTOPRISM_API_KEY) return 'GUEST_ID';
-    
     try {
       const baseUrl = PHOTOPRISM_URL.replace(/\/$/, '');
       setSubmissionStatus('Connecting to AI Engine...');
-      
       const base64Data = base64Photo.split(',')[1];
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Uint8Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
       const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
-
-      // 1. Upload to Import Folder
       const formData = new FormData();
       formData.append('file', blob, `kiosk_${Date.now()}.jpg`);
       await fetch(`${baseUrl}/api/v1/import/upload`, {
@@ -93,28 +100,19 @@ const App: React.FC = () => {
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY },
         body: formData
       });
-
-      // 2. Trigger Indexing
-      setSubmissionStatus('Scanning Face Signature...');
       await fetch(`${baseUrl}/api/v1/index`, {
         method: 'POST',
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: '/', cleanup: false })
       });
-
-      // 3. Poll for the specific SubjectUID (Markers)
-      // We check for several seconds to allow the recognition cluster to update
       for (let i = 0; i < 8; i++) {
         setSubmissionStatus(`Authenticating Face (${i+1}/8)...`);
         await new Promise(r => setTimeout(r, 2000));
-        
         const res = await fetch(`${baseUrl}/api/v1/photos?count=15&order=added`, {
           headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
         });
         const photos = await res.json();
-        
         if (Array.isArray(photos)) {
-          // Look for any photo processed in the last batch with a face marker
           for (const p of photos) {
             if (p.Markers && Array.isArray(p.Markers)) {
               const marker = p.Markers.find((m: any) => m.SubjectUID && m.Type === 'face');
@@ -123,7 +121,6 @@ const App: React.FC = () => {
           }
         }
       }
-      // If no face found, generate a persistent guest ID based on time
       return `GUEST_${Date.now().toString(36).toUpperCase()}`;
     } catch (err) {
       console.error("PhotoPrism identification error:", err);
@@ -148,15 +145,12 @@ const App: React.FC = () => {
     if (!supabase || isSubmitting) return;
     setIsSubmitting(true);
     setSubmissionStatus('Initializing...');
-
     try {
       const rawPhoto = currentReview.photo || '';
-      // Step 1: AI Analysis & DB Storage in parallel
       const [faceId, photoUrl] = await Promise.all([
         identifyFaceWithPhotoPrism(rawPhoto),
         uploadToSupabase(rawPhoto)
       ]);
-
       const newReview = {
         name: details.name,
         photo: photoUrl,
@@ -165,12 +159,9 @@ const App: React.FC = () => {
         comment: details.comment,
         timestamp: Date.now()
       };
-
       setSubmissionStatus('Saving Memory...');
       const { data, error } = await supabase.from('reviews').insert([newReview]).select();
-      
       if (error) {
-        // Fallback for missing column schema cache
         const fallbackReview = { ...newReview };
         delete (fallbackReview as any).face_id;
         const { data: fbData, error: fbError } = await supabase.from('reviews').insert([fallbackReview]).select();
@@ -179,7 +170,6 @@ const App: React.FC = () => {
       } else if (data) {
         setCurrentReview(data[0]);
       }
-      
       setStep(KioskStep.THANKS);
       fetchReviews();
     } catch (err: any) {
@@ -195,6 +185,14 @@ const App: React.FC = () => {
     setIsSubmitting(false);
     setGalleryFaceId(null);
   };
+
+  if (!isAuthenticated && !isPublicMode) {
+    return <LoginView onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  if (step === KioskStep.ADMIN) {
+    return <AdminPanel onBack={resetKiosk} reviews={reviews} onUpdate={fetchReviews} />;
+  }
 
   if (step === KioskStep.GALLERY && galleryFaceId) {
     return <GalleryView faceId={galleryFaceId} reviews={reviews} onBack={resetKiosk} />;
@@ -218,7 +216,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && <HomeView onStart={() => setStep(KioskStep.CAMERA)} onToggleMode={() => setIsDisplayMode(true)} />}
+            {step === KioskStep.HOME && <HomeView onStart={() => setStep(KioskStep.CAMERA)} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.FORM && <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} />}

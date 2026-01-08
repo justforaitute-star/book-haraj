@@ -1,58 +1,35 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 
 interface HomeViewProps {
   onStart: () => void;
   onToggleMode: () => void;
+  onAdmin: () => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
+const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = () => {
     const doc = document.documentElement as any;
     const fsDoc = document as any;
-    
-    const isCurrentlyFs = fsDoc.fullscreenElement || 
-                          fsDoc.webkitFullscreenElement || 
-                          fsDoc.mozFullScreenElement || 
-                          fsDoc.msFullscreenElement;
-
+    const isCurrentlyFs = fsDoc.fullscreenElement || fsDoc.webkitFullscreenElement || fsDoc.mozFullScreenElement || fsDoc.msFullscreenElement;
     if (!isCurrentlyFs) {
       if (doc.requestFullscreen) doc.requestFullscreen().catch(() => {});
       else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-      else if (doc.mozRequestFullScreen) doc.mozRequestFullScreen();
-      else if (doc.msRequestFullscreen) doc.msRequestFullscreen();
     } else {
       if (fsDoc.exitFullscreen) fsDoc.exitFullscreen().catch(() => {});
-      else if (fsDoc.webkitExitFullscreen) fsDoc.webkitExitFullscreen();
-      else if (fsDoc.mozCancelFullScreen) fsDoc.mozCancelFullScreen();
-      else if (fsDoc.msExitFullscreen) fsDoc.msExitFullscreen();
     }
   };
 
   useEffect(() => {
     const handleFsChange = () => {
       const fsDoc = document as any;
-      setIsFullscreen(!!(
-        fsDoc.fullscreenElement || 
-        fsDoc.webkitFullscreenElement || 
-        fsDoc.mozFullScreenElement || 
-        fsDoc.msFullscreenElement
-      ));
+      setIsFullscreen(!!(fsDoc.fullscreenElement || fsDoc.webkitFullscreenElement));
     };
-    
     document.addEventListener('fullscreenchange', handleFsChange);
-    document.addEventListener('webkitfullscreenchange', handleFsChange);
-    document.addEventListener('mozfullscreenchange', handleFsChange);
-    document.addEventListener('MSFullscreenChange', handleFsChange);
-    
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFsChange);
-      document.removeEventListener('webkitfullscreenchange', handleFsChange);
-      document.removeEventListener('mozfullscreenchange', handleFsChange);
-      document.removeEventListener('MSFullscreenChange', handleFsChange);
-    };
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
   const remoteUrl = useMemo(() => {
@@ -71,13 +48,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
 
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
-      
-      {/* Tiny Fullscreen Toggle */}
       <button 
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleFullscreen();
-        }}
+        onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
         className="fixed top-8 right-8 w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 z-[100] shadow-2xl active:scale-90"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,9 +63,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
 
       <div className="flex flex-col items-center w-full animate-fade-in-up">
         <div className="overflow-hidden mb-12">
-          <p className="text-xl text-slate-400 max-w-sm mx-auto leading-relaxed font-black uppercase tracking-[0.3em] animate-slide-reveal">
-            Share Your Story
-          </p>
+          <p className="text-xl text-slate-400 max-w-sm mx-auto leading-relaxed font-black uppercase tracking-[0.3em]">Share Your Story</p>
         </div>
 
         <div className="flex flex-col items-center gap-10 w-full">
@@ -125,9 +95,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
             </div>
             <div className="text-left">
               <h3 className="text-white font-black text-sm mb-1 uppercase tracking-widest group-hover:text-white transition-colors">SKIP THE CROWD</h3>
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-[120px]">
-                Scan to review from your phone
-              </p>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-[120px]">Scan to review from your phone</p>
             </div>
           </div>
         </div>
@@ -138,14 +106,16 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
           <div className="bg-slate-900/90 backdrop-blur-2xl p-6 rounded-[32px] shadow-2xl border border-white/10 mb-3 w-72 text-left animate-fade-in-up">
             <h4 className="text-[11px] font-black text-white uppercase mb-3 tracking-widest flex items-center gap-2">
               <div className="w-2 h-2 bg-white animate-pulse"></div>
-              Display Setup
+              Setup Panel
             </h4>
-            <div className="bg-black p-3 rounded-xl text-[10px] break-all font-mono text-slate-400 mb-4 select-all border border-white/10">
-              {displayUrl}
+            <div className="flex flex-col gap-2">
+              <button onClick={onToggleMode} className="w-full py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Launch Feed</button>
+              <button onClick={onAdmin} className="w-full py-3 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 border border-white/10">Admin Panel</button>
             </div>
-            <button onClick={onToggleMode} className="w-full py-4 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-lg">
-              Launch Feed
-            </button>
+            <div className="mt-4 pt-4 border-t border-white/5">
+               <p className="text-[8px] text-slate-500 uppercase tracking-widest mb-2 font-black">Feed Link:</p>
+               <div className="bg-black p-2 rounded-lg text-[8px] break-all font-mono text-slate-600 select-all border border-white/5">{displayUrl}</div>
+            </div>
           </div>
         )}
         <button 

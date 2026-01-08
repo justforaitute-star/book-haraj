@@ -4,7 +4,8 @@ export enum KioskStep {
   CAMERA = 'CAMERA',
   FORM = 'FORM',
   THANKS = 'THANKS',
-  GALLERY = 'GALLERY'
+  GALLERY = 'GALLERY',
+  ADMIN = 'ADMIN'
 }
 
 export interface DetailedRatings {
@@ -20,6 +21,7 @@ export interface DetailedRatings {
 
 export interface Review {
   id: string;
+  serial_number?: number;
   name: string;
   photo: string; // URL from Supabase Storage
   face_id?: string; // Unique facial signature for grouping
