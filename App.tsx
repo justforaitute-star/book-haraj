@@ -89,6 +89,7 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Set up polling for both config and reviews
   useEffect(() => {
     fetchReviews();
     fetchConfig();
@@ -226,7 +227,7 @@ const App: React.FC = () => {
   };
 
   if (!isAuthenticated && !isPublicMode) {
-    return <LoginView onLogin={() => setIsAuthenticated(true)} />;
+    return <LoginView logoUrl={config.logo_url} onLogin={() => setIsAuthenticated(true)} />;
   }
 
   if (step === KioskStep.ADMIN) {

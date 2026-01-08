@@ -4,15 +4,15 @@ import Logo3 from './Logo3.tsx';
 
 interface LoginViewProps {
   onLogin: () => void;
+  logoUrl?: string;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, logoUrl }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Updated access code for Book Haraj 3.0 station authorization
     if (password === 'bkharaj@focus123') {
       onLogin();
     } else {
@@ -29,7 +29,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       </div>
 
       <div className="mb-12 scale-75 md:scale-100">
-        <Logo3 />
+        <Logo3 logoUrl={logoUrl} />
       </div>
 
       <div className="w-full max-w-sm bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 shadow-2xl relative z-10 animate-fade-in-up">
