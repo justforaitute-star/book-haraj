@@ -42,10 +42,11 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
     setRatings(prev => ({ ...prev, [category]: value }));
     setAnimatingStar(value);
     
+    // Satisfying delay before moving to next step
     setTimeout(() => {
       setAnimatingStar(null);
       nextStep();
-    }, 600);
+    }, 800);
   };
 
   const nextStep = () => {
@@ -157,7 +158,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                       onClick={() => handleRatingChange(categoryId, star)}
                       className={`text-7xl md:text-9xl transition-all duration-300 transform hover:scale-110 active:scale-90 ${
                         isActive 
-                          ? 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]' 
+                          ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.6)]' 
                           : 'text-slate-800 hover:text-slate-700'
                       } ${isAnimating ? 'animate-star-pop' : ''}`}
                     >

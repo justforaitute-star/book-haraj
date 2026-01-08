@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 
 interface HomeViewProps {
   onStart: () => void;
@@ -7,6 +7,21 @@ interface HomeViewProps {
 
 const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
   const [showSetup, setShowSetup] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
 
   const remoteUrl = useMemo(() => {
     const url = new URL(window.location.href);
@@ -20,12 +35,26 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
     return url.toString();
   }, []);
 
-  // Using Black/White for QR Code
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(remoteUrl)}&bgcolor=000000&color=ffffff`;
 
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
       
+      {/* Tiny Fullscreen Toggle */}
+      <button 
+        onClick={toggleFullscreen}
+        className="fixed top-8 right-8 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 z-[60]"
+        title="Toggle Fullscreen"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {isFullscreen ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+          )}
+        </svg>
+      </button>
+
       <div className="flex flex-col items-center w-full animate-fade-in-up">
         <div className="overflow-hidden mb-12">
           <p className="text-xl text-slate-400 max-w-sm mx-auto leading-relaxed font-black uppercase tracking-[0.3em] animate-slide-reveal">
