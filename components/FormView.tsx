@@ -9,38 +9,35 @@ interface FormViewProps {
 }
 
 const RATING_CATEGORIES = [
-  { id: 'books', label: 'Book Availability', question: 'How was the book selection and availability?' },
-  { id: 'venue', label: 'Venue Arrangement', question: 'What did you think of the venue layout?' },
-  { id: 'collection', label: 'Ease of Collection', question: 'How easy was it to collect your books?' },
-  { id: 'authors', label: 'Author Sessions', question: 'Did you enjoy the author introductions?' },
-  { id: 'food', label: 'Food Stalls', question: 'How were the food and refreshments?' },
-  { id: 'artibhition', label: 'Artibhition', question: 'What is your verdict on the Artibhition program?' },
-  { id: 'coffee', label: 'Book a Coffee', question: 'Did you enjoy the Book a Coffee experience?' },
-  { id: 'overall', label: 'Overall Experience', question: 'Finally, rate your overall experience' },
+  { id: 'books', label: 'Book Availability', question: 'How was the selection?' },
+  { id: 'venue', label: 'Venue Arrangement', question: 'Layout of the venue?' },
+  { id: 'collection', label: 'Ease of Collection', question: 'Collection process?' },
+  { id: 'authors', label: 'Author Sessions', question: 'Enjoy the sessions?' },
+  { id: 'food', label: 'Food Stalls', question: 'Food & Refreshments?' },
+  { id: 'artibhition', label: 'Artibhition', question: 'The Artibhition program?' },
+  { id: 'coffee', label: 'Book a Coffee', question: 'Coffee experience?' },
+  { id: 'overall', label: 'Overall Experience', question: 'Your final verdict?' },
 ] as const;
 
 const COMMENT_SUGGESTIONS = [
   "Amazing collection!",
   "Great atmosphere.",
-  "Loved the author talks!",
-  "Very well organized.",
+  "Well organized.",
   "Excellent coffee!",
-  "A book lover's paradise.",
-  "Can't wait for next year!",
+  "Loved it!",
 ];
 
-// Custom Rounded Star Component using stroke-linejoin="round" for curved corners
-const RoundedStar = ({ active, animating }: { active: boolean; animating: boolean }) => (
+// Custom Rounded Star Component with soft curved corners
+const RoundedStar = ({ active, animating, sizeClass }: { active: boolean; animating: boolean; sizeClass: string }) => (
   <svg 
     viewBox="0 0 24 24" 
-    className={`w-full h-full transition-all duration-300 ${active ? 'text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'text-slate-800 hover:text-slate-700'} ${animating ? 'animate-star-pop' : ''}`}
+    className={`${sizeClass} transition-all duration-300 ${active ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.4)]' : 'text-slate-800'} ${animating ? 'animate-star-pop' : ''}`}
     fill="currentColor"
     stroke="currentColor"
-    strokeWidth="1.5"
+    strokeWidth="1"
     strokeLinejoin="round"
-    strokeLinecap="round"
   >
-    <path d="M12 2.5l2.35 7.23h7.6l-6.15 4.47 2.35 7.23-6.15-4.47-6.15 4.47 2.35-7.23-6.15-4.47h7.6z" />
+    <path d="M12 2.5l2.8 6.5h7l-5.4 4.5 2 7.5-6.4-4.8-6.4 4.8 2-7.5-5.4-4.5h7z" />
   </svg>
 );
 
@@ -69,7 +66,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
     setTimeout(() => {
       setAnimatingStar(null);
       nextStep();
-    }, 700);
+    }, 600);
   };
 
   const nextStep = () => {
@@ -89,8 +86,8 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
 
   const addSuggestion = (text: string) => {
     setComment(prev => {
-      if (!prev.trim()) return text;
-      return `${prev.trim()} ${text}`;
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${text}` : text;
     });
   };
 
@@ -104,56 +101,41 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
   };
 
   return (
-    <div className={`bg-black flex flex-col w-full relative transition-all duration-500 ${isRemote ? 'h-full max-w-none' : 'h-[85vh] max-w-4xl rounded-[40px] border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)]'} overflow-hidden animate-fade-in`}>
+    <div className={`bg-black flex flex-col w-full relative transition-all duration-500 ${isRemote ? 'h-full max-w-none' : 'h-[85vh] max-w-4xl rounded-[40px] border border-white/10 shadow-2xl'} overflow-hidden animate-fade-in`}>
       
-      {/* Top Header/Progress */}
-      <div className="absolute top-0 left-0 right-0 z-40 px-6 pt-8 pb-4 flex items-center justify-between bg-gradient-to-b from-black via-black/80 to-transparent">
-        <button 
-          onClick={prevStep}
-          className="w-10 h-10 md:w-12 md:h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white border border-white/10 transition-all active:scale-90"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {/* Mini Progress Header */}
+      <div className="absolute top-0 left-0 right-0 z-40 px-6 pt-6 pb-2 flex items-center justify-between">
+        <button onClick={prevStep} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center text-white border border-white/10">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-
-        <p className="text-white text-[10px] md:text-[12px] font-black uppercase tracking-[0.2em] opacity-80">
-          STEP {currentStep + 1} / {totalSteps}
-        </p>
-
-        <button 
-          onClick={onCancel} 
-          className="w-10 h-10 md:w-12 md:h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-400 transition-all border border-white/10 active:scale-90"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex flex-col items-center">
+          <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">{currentStep + 1} / {totalSteps}</span>
+          <div className="flex gap-1 mt-1.5">
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div key={i} className={`h-1 w-4 rounded-full transition-all duration-500 ${i <= currentStep ? 'bg-white' : 'bg-white/10'}`} />
+            ))}
+          </div>
+        </div>
+        <button onClick={onCancel} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center text-white/40 border border-white/10">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-20 pt-24 pb-12 overflow-y-auto no-scrollbar">
+      <div className={`flex-1 flex flex-col items-center justify-center ${isRemote ? 'px-6 pt-16' : 'px-20 pt-24'} pb-6 overflow-y-auto no-scrollbar`}>
         
-        {/* Progress Bar */}
-        <div className="flex gap-1.5 md:gap-2.5 mb-12 md:mb-20 w-full max-w-md justify-center flex-shrink-0">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div 
-              key={i} 
-              className={`h-[3px] md:h-[4px] flex-1 rounded-full transition-all duration-700 ${
-                i <= currentStep ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]' : 'bg-slate-900'
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="w-full transition-all duration-500 transform" key={currentStep}>
+        <div className="w-full transition-all duration-300 transform" key={currentStep}>
           
           {currentStep === 0 && (
-            <div className="space-y-6 md:space-y-8 text-center animate-fade-in-up">
-              <h2 className="text-slate-500 text-[10px] md:text-[13px] font-black uppercase tracking-[0.4em]">REGISTRATION</h2>
-              <h3 className="text-3xl md:text-6xl text-white font-[900] tracking-tight leading-none">
-                What is your name?
+            <div className="space-y-4 text-center animate-fade-in-up">
+              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">WELCOME</h2>
+              <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
+                Your Name
               </h3>
-              <div className="relative max-w-xs md:max-w-md mx-auto pt-4 md:pt-6">
+              <div className="relative max-w-xs mx-auto pt-4">
                 <input
                   type="text"
                   autoFocus
@@ -161,23 +143,23 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && name.trim() && nextStep()}
-                  placeholder="TYPE NAME..."
-                  className="w-full text-center text-2xl md:text-5xl py-4 border-b-2 border-slate-900 focus:border-white outline-none transition-all placeholder:text-slate-900 font-[800] uppercase bg-transparent text-white"
+                  placeholder="TYPE HERE..."
+                  className={`w-full text-center ${isRemote ? 'text-xl py-2' : 'text-4xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black uppercase bg-transparent text-white`}
                 />
               </div>
             </div>
           )}
 
           {currentStep > 0 && currentStep <= RATING_CATEGORIES.length && (
-            <div className="space-y-10 md:space-y-12 text-center animate-fade-in-up">
-              <h2 className="text-slate-500 text-[10px] md:text-[13px] font-black uppercase tracking-[0.4em]">
+            <div className="space-y-6 text-center animate-fade-in-up">
+              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">
                 {RATING_CATEGORIES[currentStep - 1].label}
               </h2>
-              <h3 className="text-2xl md:text-5xl text-white font-[900] tracking-tight leading-[1.1] max-w-2xl mx-auto">
+              <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-tight max-w-xs mx-auto`}>
                 {RATING_CATEGORIES[currentStep - 1].question}
               </h3>
               
-              <div className="flex justify-center gap-3 md:gap-8 pt-4 md:pt-6">
+              <div className={`flex justify-center ${isRemote ? 'gap-2' : 'gap-6'} pt-4`}>
                 {[1, 2, 3, 4, 5].map((star) => {
                   const categoryId = RATING_CATEGORIES[currentStep - 1].id as keyof DetailedRatings;
                   const currentRating = ratings[categoryId];
@@ -189,9 +171,9 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                       key={star}
                       type="button"
                       onClick={() => handleRatingChange(categoryId, star)}
-                      className="w-12 h-12 md:w-24 md:h-24 transition-all duration-300 transform hover:scale-110 active:scale-90"
+                      className={`${isRemote ? 'w-10 h-10' : 'w-20 h-20'} transition-all active:scale-90`}
                     >
-                      <RoundedStar active={isActive} animating={isAnimating} />
+                      <RoundedStar active={isActive} animating={isAnimating} sizeClass="w-full h-full" />
                     </button>
                   );
                 })}
@@ -200,33 +182,32 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
           )}
 
           {currentStep === totalSteps - 1 && (
-            <div className="space-y-8 md:space-y-10 text-center animate-fade-in-up">
-              <h2 className="text-slate-500 text-[10px] md:text-[13px] font-black uppercase tracking-[0.4em]">FEEDBACK</h2>
-              <h3 className="text-3xl md:text-6xl text-white font-[900] tracking-tight leading-none">
+            <div className="space-y-6 text-center animate-fade-in-up">
+              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">LAST STEP</h2>
+              <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-none`}>
                 Final thoughts?
               </h3>
               
-              {/* Quick Suggestions - Optimized for Mobile Typing */}
-              <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-xl mx-auto pt-4 md:pt-6">
+              <div className="flex flex-wrap justify-center gap-1.5 max-w-xs mx-auto pt-2">
                 {COMMENT_SUGGESTIONS.map((sug, i) => (
                   <button
                     key={i}
                     onClick={() => addSuggestion(sug)}
-                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] md:text-xs font-bold text-slate-400 hover:text-white transition-all active:scale-95"
+                    className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-[9px] font-bold text-white/50 hover:text-white active:scale-95"
                   >
                     {sug}
                   </button>
                 ))}
               </div>
 
-              <div className="max-w-xl mx-auto w-full pt-6 md:pt-8">
+              <div className="max-w-xs mx-auto w-full">
                 <textarea
                   rows={2}
                   autoFocus
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="OPTIONAL COMMENT..."
-                  className="w-full text-center text-xl md:text-3xl py-4 border-b-2 border-slate-900 focus:border-white outline-none transition-all placeholder:text-slate-900 resize-none bg-transparent font-bold tracking-tight text-white"
+                  placeholder="OPTIONAL..."
+                  className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-2xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 resize-none bg-transparent font-bold tracking-tight text-white`}
                 />
               </div>
             </div>
@@ -234,31 +215,24 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className={`px-6 md:px-10 pb-10 flex gap-4 md:gap-6 flex-shrink-0 ${isRemote ? 'safe-bottom' : ''}`}>
+      <div className={`px-6 pb-8 flex gap-3 flex-shrink-0 ${isRemote ? 'safe-bottom' : ''}`}>
         <button
           onClick={prevStep}
-          className="flex-1 py-5 md:py-6 rounded-2xl font-black uppercase tracking-[0.2em] transition-all text-[10px] md:text-[12px] flex items-center justify-center gap-2 md:gap-3 bg-slate-950 text-slate-600 hover:text-white border border-white/5 active:scale-95"
+          className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] bg-white/5 text-white/30 active:scale-95`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7 7-7" />
-          </svg>
           BACK
         </button>
 
         <button
           onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
           disabled={currentStep === 0 && !name.trim()}
-          className={`flex-1 py-5 md:py-6 rounded-2xl font-black uppercase tracking-[0.2em] transition-all text-[10px] md:text-[12px] flex items-center justify-center gap-2 md:gap-3 active:scale-95 ${
+          className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all ${
             (currentStep === totalSteps - 1) || (currentStep > 0 && currentStep <= RATING_CATEGORIES.length && ratings[RATING_CATEGORIES[currentStep-1].id as keyof DetailedRatings] > 0)
-            ? 'bg-white text-black shadow-xl' 
-            : 'bg-slate-900 text-slate-700 cursor-not-allowed opacity-50'
+            ? 'bg-white text-black' 
+            : 'bg-white/5 text-white/10'
           }`}
         >
-          {currentStep === totalSteps - 1 ? 'COMPLETE' : 'NEXT'}
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M9 5l7 7-7 7" />
-          </svg>
+          {currentStep === totalSteps - 1 ? 'SUBMIT' : 'NEXT'}
         </button>
       </div>
     </div>

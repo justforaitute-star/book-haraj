@@ -9,34 +9,39 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Cross-browser Fullscreen Toggle with support for modern and legacy browsers
   const toggleFullscreen = () => {
     const doc = document.documentElement as any;
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement && !(document as any).mozFullScreenElement && !(document as any).msFullscreenElement) {
+    const fsDoc = document as any;
+    
+    const isCurrentlyFs = fsDoc.fullscreenElement || 
+                          fsDoc.webkitFullscreenElement || 
+                          fsDoc.mozFullScreenElement || 
+                          fsDoc.msFullscreenElement;
+
+    if (!isCurrentlyFs) {
       if (doc.requestFullscreen) doc.requestFullscreen().catch(() => {});
       else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
       else if (doc.mozRequestFullScreen) doc.mozRequestFullScreen();
       else if (doc.msRequestFullscreen) doc.msRequestFullscreen();
-      setIsFullscreen(true);
     } else {
-      const exit = document as any;
-      if (exit.exitFullscreen) exit.exitFullscreen().catch(() => {});
-      else if (exit.webkitExitFullscreen) exit.webkitExitFullscreen();
-      else if (exit.mozCancelFullScreen) exit.mozCancelFullScreen();
-      else if (exit.msExitFullscreen) exit.msExitFullscreen();
-      setIsFullscreen(false);
+      if (fsDoc.exitFullscreen) fsDoc.exitFullscreen().catch(() => {});
+      else if (fsDoc.webkitExitFullscreen) fsDoc.webkitExitFullscreen();
+      else if (fsDoc.mozCancelFullScreen) fsDoc.mozCancelFullScreen();
+      else if (fsDoc.msExitFullscreen) fsDoc.msExitFullscreen();
     }
   };
 
   useEffect(() => {
     const handleFsChange = () => {
+      const fsDoc = document as any;
       setIsFullscreen(!!(
-        document.fullscreenElement || 
-        (document as any).webkitFullscreenElement || 
-        (document as any).mozFullScreenElement || 
-        (document as any).msFullscreenElement
+        fsDoc.fullscreenElement || 
+        fsDoc.webkitFullscreenElement || 
+        fsDoc.mozFullScreenElement || 
+        fsDoc.msFullscreenElement
       ));
     };
+    
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
     document.addEventListener('mozfullscreenchange', handleFsChange);
@@ -67,14 +72,13 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
       
-      {/* Tiny Fullscreen Toggle - Fixed Z-Index and Interaction */}
+      {/* Tiny Fullscreen Toggle */}
       <button 
         onClick={(e) => {
           e.stopPropagation();
           toggleFullscreen();
         }}
         className="fixed top-8 right-8 w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 z-[100] shadow-2xl active:scale-90"
-        title="Toggle Fullscreen"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           {isFullscreen ? (
@@ -98,7 +102,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
             className="group relative w-full max-w-md py-8 bg-white text-black rounded-[24px] text-3xl font-[900] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.1)] hover:scale-[1.05] transition-all active:scale-95 overflow-hidden uppercase tracking-tight animate-glow-pulse"
           >
             <div className="absolute inset-0 animate-shimmer opacity-20"></div>
-            
             <span className="relative z-10 flex items-center justify-center gap-5">
               POST REVIEW
               <div className="w-10 h-10 bg-black rounded-[6px] flex items-center justify-center group-hover:rotate-90 transition-transform duration-500 shadow-lg">
@@ -117,17 +120,13 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
 
           <div className="group bg-white/5 backdrop-blur-md p-6 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-8 w-full max-w-md transition-all hover:border-white/40 hover:bg-white/10 animate-fade-in" style={{ animationDelay: '0.6s' }}>
             <div className="p-4 bg-white rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-500 relative">
-              <img 
-                src={qrCodeUrl} 
-                alt="Scan to Review" 
-                className="w-20 h-20 mix-blend-multiply opacity-90"
-              />
+              <img src={qrCodeUrl} alt="Scan to Review" className="w-20 h-20 mix-blend-multiply opacity-90" />
               <div className="absolute -inset-1 border-2 border-white/20 rounded-2xl animate-pulse"></div>
             </div>
             <div className="text-left">
-              <h3 className="text-white font-black text-sm mb-1 uppercase tracking-widest group-hover:text-white transition-colors">POST FROM PHONE</h3>
+              <h3 className="text-white font-black text-sm mb-1 uppercase tracking-widest group-hover:text-white transition-colors">SKIP THE CROWD</h3>
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-[120px]">
-                Scan to avoid the queue at the monitor
+                Scan to review from your phone
               </p>
             </div>
           </div>
@@ -144,10 +143,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
             <div className="bg-black p-3 rounded-xl text-[10px] break-all font-mono text-slate-400 mb-4 select-all border border-white/10">
               {displayUrl}
             </div>
-            <button 
-              onClick={onToggleMode}
-              className="w-full py-4 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-lg"
-            >
+            <button onClick={onToggleMode} className="w-full py-4 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-lg">
               Launch Feed
             </button>
           </div>
