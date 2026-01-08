@@ -12,8 +12,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple station access code for Book Haraj 3.0
-    if (password === 'haraj2025' || password === 'admin') {
+    // Updated access code for Book Haraj 3.0 station authorization
+    if (password === 'bkharaj@focus123') {
       onLogin();
     } else {
       setError(true);
