@@ -228,7 +228,7 @@ const App: React.FC = () => {
           </>
         )}
       </main>
-      {!isRemoteMode && step === KioskStep.HOME && <footer className="pb-12 w-full flex flex-col items-center opacity-40"><p className="text-[9px] font-black tracking-[0.5em] uppercase italic">Powered by PhotoPrism AI</p></footer>}
+      {/* Footer removed per user request to hide branding */}
     </div>
   );
 };
