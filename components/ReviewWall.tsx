@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Review } from '../types.ts';
 
 interface ReviewWallProps {
@@ -6,12 +7,36 @@ interface ReviewWallProps {
   fullScreen?: boolean;
   singleReviewId?: string | null;
   onDeleteAll?: () => void;
+  onExit?: () => void;
 }
 
-const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null, onDeleteAll }) => {
+const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null, onDeleteAll, onExit }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number | null>(null);
   const scrollPosRef = useRef(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Handle Fullscreen Toggle
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((e) => {
+        console.error(`Error attempting to enable fullscreen: ${e.message}`);
+      });
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  // Sync fullscreen state with browser events (e.g. Esc key)
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
 
   const averageRating = useMemo(() => {
     if (reviews.length === 0) return 0;
@@ -66,18 +91,19 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
   return (
     <div className={`relative flex flex-col items-center w-full h-full overflow-hidden bg-black ${fullScreen ? 'p-0' : 'p-4'}`}>
       
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.02]">
-        <div className="absolute top-20 left-[10%] w-20 h-20 bg-white rotate-12"></div>
-        <div className="absolute bottom-40 right-[15%] w-40 h-40 bg-white -rotate-6"></div>
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]">
+        <div className="absolute top-20 left-[10%] w-40 h-40 border border-white rotate-12"></div>
+        <div className="absolute bottom-40 right-[15%] w-60 h-60 border border-white -rotate-6"></div>
       </div>
 
       {fullScreen && (
-        <div className="relative z-20 w-full pt-6 pb-6 px-12 animate-fade-in flex-shrink-0 bg-black/90 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between">
+        <div className="relative z-20 w-full pt-6 pb-6 px-12 animate-fade-in flex-shrink-0 bg-black/95 backdrop-blur-2xl border-b border-white/10 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-6">
             {onDeleteAll && !singleReviewId && (
               <button 
                 onClick={onDeleteAll}
-                className="mr-6 p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 transition-all flex items-center gap-2 group"
+                className="mr-6 p-3 bg-red-600/20 hover:bg-red-600/40 text-red-500 rounded-xl border border-red-500/20 transition-all flex items-center gap-2 group"
                 title="Admin: Delete All Reviews"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,18 +123,43 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
             </div>
           </div>
 
-          {!singleReviewId && reviews.length > 0 && (
-            <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10 shadow-2xl">
-              <div className="text-right">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1 opacity-60">AVG VISITOR</p>
-                <p className="text-[11px] font-black text-white uppercase tracking-tighter leading-none">RATING</p>
+          <div className="flex items-center gap-4">
+            {!singleReviewId && reviews.length > 0 && (
+              <div className="flex items-center gap-4 bg-white/10 px-6 py-3 rounded-2xl border border-white/20 shadow-2xl mr-4">
+                <div className="text-right border-r border-white/10 pr-4">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">AVG VISITOR</p>
+                  <p className="text-[11px] font-black text-white uppercase tracking-tighter leading-none">RATING</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white text-3xl font-black">{averageRating}</span>
+                  <span className="text-white text-2xl">★</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-white text-3xl font-black">{averageRating}</span>
-                <span className="text-white text-2xl">★</span>
-              </div>
-            </div>
-          )}
+            )}
+            
+            <button 
+              onClick={toggleFullscreen}
+              className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all border border-white/10 flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {isFullscreen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                )}
+              </svg>
+              {isFullscreen ? 'Exit Full' : 'Fullscreen'}
+            </button>
+
+            {onExit && (
+              <button 
+                onClick={onExit}
+                className="px-6 py-4 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-transform border border-white/10"
+              >
+                Exit View
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -124,35 +175,39 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
               return (
               <div 
                 key={`${review.id}-${index}`} 
-                className={`break-inside-avoid mb-12 group relative bg-slate-900/40 backdrop-blur-md rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden flex flex-col transition-all hover:scale-[1.02] animate-fade-in-up`}
+                className={`break-inside-avoid mb-12 group relative bg-white/[0.03] backdrop-blur-md rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] border border-white/10 overflow-hidden flex flex-col transition-all hover:scale-[1.02] animate-fade-in-up`}
                 style={{ 
                   animationDelay: `${(index % 8) * 100}ms`,
                 }}
               >
-                <div className="relative aspect-[4/5] overflow-hidden bg-slate-950">
+                {/* Refined Image Container */}
+                <div className="relative aspect-[3/4] overflow-hidden bg-slate-950 m-2 rounded-[24px]">
                   <img 
                     src={review.photo} 
                     alt={review.name} 
-                    className="w-full h-full object-cover opacity-90 transition-transform duration-[6000ms] group-hover:scale-110"
+                    className="w-full h-full object-cover object-center transition-transform duration-[8000ms] group-hover:scale-110 filter brightness-110 contrast-105"
                   />
-                  <div className="absolute top-5 left-5 bg-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border-2 border-black">
-                    <span className="text-black text-sm leading-none font-black">★ {overallRating}.0</span>
+                  {/* Rating Badge */}
+                  <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 shadow-xl">
+                    <span className="text-white text-xs font-black tracking-widest">★ {overallRating}.0</span>
                   </div>
+                  {/* Bottom Vignette for better contrast */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
                 </div>
 
-                <div className="p-10">
-                  <div className="w-4 h-1 bg-white rounded-full mb-6"></div>
-                  <p className="text-white text-xl leading-[1.6] font-medium tracking-tight mb-10 italic">
+                <div className="p-8">
+                  <div className="w-8 h-[2px] bg-white/20 rounded-full mb-6"></div>
+                  <p className="text-white/90 text-lg leading-[1.5] font-light tracking-tight mb-8 italic">
                     "{review.comment || 'Amazing experience at the expo!'}"
                   </p>
                   
-                  <div className="flex items-center justify-between pt-8 border-t border-white/5">
+                  <div className="flex items-center justify-between pt-6 border-t border-white/10">
                     <div className="min-w-0">
-                      <h4 className="font-black text-slate-100 text-lg uppercase tracking-tighter truncate">{review.name}</h4>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">VISITOR FEEDBACK</p>
+                      <h4 className="font-black text-white text-base uppercase tracking-tighter truncate">{review.name}</h4>
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">VISITOR</p>
                     </div>
-                    <div className="flex-shrink-0 w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0 w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                        </svg>
                     </div>
@@ -166,8 +221,8 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
             <div className="w-20 h-20 bg-slate-900 rounded-[30px] shadow-2xl flex items-center justify-center mb-8 border border-white/5 animate-pulse">
                <div className="w-6 h-6 bg-white rounded-sm"></div>
             </div>
-            <h3 className="text-xl font-black text-slate-600 uppercase tracking-[0.6em]">
-              WAITING FOR UPDATES
+            <h3 className="text-xl font-black text-slate-700 uppercase tracking-[0.6em]">
+              FETCHING REVIEWS
             </h3>
           </div>
         )}

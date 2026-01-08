@@ -126,6 +126,14 @@ const App: React.FC = () => {
     setStep(KioskStep.FORM);
   };
 
+  const handleExitDisplay = () => {
+    setIsDisplayMode(false);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('mode');
+    url.searchParams.delete('id');
+    window.history.pushState({}, '', url.toString());
+  };
+
   const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
     if (!supabase) return;
 
@@ -189,18 +197,8 @@ const App: React.FC = () => {
           fullScreen 
           singleReviewId={singleReviewId} 
           onDeleteAll={handleDeleteAll}
+          onExit={handleExitDisplay}
         />
-        <button 
-          onClick={() => {
-            setIsDisplayMode(false);
-            const url = new URL(window.location.href);
-            url.searchParams.delete('mode');
-            window.history.pushState({}, '', url.toString());
-          }}
-          className="absolute top-6 right-6 px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10 backdrop-blur-md z-50 hover:bg-white/20 transition-colors"
-        >
-          Exit View
-        </button>
       </div>
     );
   }
