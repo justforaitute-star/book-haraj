@@ -62,12 +62,15 @@ const App: React.FC = () => {
   const fetchConfig = useCallback(async () => {
     if (!supabase) return;
     try {
-      const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+      const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
       if (!error && data) {
         setConfig({
           logo_url: data.logo_url || 'logo.png',
           categories: data.categories || DEFAULT_CATEGORIES
         });
+      } else if (error) {
+        // Only log, don't break. 404 usually means table is missing.
+        console.warn("Settings fetch warning (table might be missing):", error.message);
       }
     } catch (err) {
       console.error("Failed to fetch config:", err);
@@ -89,14 +92,13 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Set up polling for both config and reviews
   useEffect(() => {
     fetchReviews();
     fetchConfig();
     const interval = setInterval(() => {
       fetchReviews();
       fetchConfig();
-    }, 10000);
+    }, 15000); // Polling every 15s
     return () => clearInterval(interval);
   }, [fetchReviews, fetchConfig]);
 

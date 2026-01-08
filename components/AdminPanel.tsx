@@ -80,12 +80,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     setIsProcessing(true);
     try {
       const fileName = `logo_${Date.now()}.${file.name.split('.').pop()}`;
-      // Note: Ensure the 'photos' bucket is set to PUBLIC in Supabase Dashboard
       const { data, error } = await supabase.storage.from('photos').upload(fileName, file);
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
       setLocalConfig(prev => ({ ...prev, logo_url: publicUrl }));
-      alert("Logo uploaded to storage. Click 'SAVE GLOBAL CONFIGURATION' to apply permanently.");
+      alert("Logo uploaded to storage. Click 'SAVE GLOBAL CONFIGURATION' below to apply.");
     } catch (err: any) {
       alert(`Logo upload failed: ${err.message || 'Unknown error'}`);
     } finally {
@@ -97,7 +96,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     if (!supabase) return;
     setIsProcessing(true);
     try {
-      // Upsert into row id=1. Ensure table 'settings' exists with columns: id (int4), logo_url (text), categories (jsonb)
       const { error } = await supabase.from('settings').upsert({
         id: 1,
         logo_url: localConfig.logo_url,
@@ -108,10 +106,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       alert("Configuration saved successfully!");
       onUpdate();
     } catch (err: any) {
-      // Improved error reporting to catch non-standard error objects
       const errorMessage = err?.message || err?.error_description || (typeof err === 'string' ? err : JSON.stringify(err));
-      alert(`Config save failed: ${errorMessage}`);
-      console.error("Supabase Save Error:", err);
+      
+      if (errorMessage.includes("404") || errorMessage.toLowerCase().includes("not found")) {
+        alert("CRITICAL ERROR: The 'settings' table is missing in Supabase.\n\nPlease create it via SQL Editor:\nCREATE TABLE settings (id int4 primary key, logo_url text, categories jsonb);");
+      } else {
+        alert(`Config save failed: ${errorMessage}`);
+      }
+      console.error("Supabase Save Error Details:", err);
     } finally {
       setIsProcessing(false);
     }
@@ -141,7 +143,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         <div className="w-20"></div>
       </header>
 
-      {/* Tab Switcher */}
       <div className="flex bg-white/5 p-1.5 rounded-2xl mb-12 border border-white/10 w-full max-w-sm">
         <button 
           onClick={() => setActiveTab('REVIEWS')}
@@ -221,7 +222,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
           </>
         ) : (
           <div className="space-y-10 animate-fade-in-up">
-            {/* Logo Configuration */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
               <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
@@ -245,12 +245,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   >
                     {localConfig.logo_url === 'logo.png' ? 'UPLOAD STATION LOGO' : 'REPLACE LOGO'}
                   </button>
-                  <p className="text-[8px] text-slate-600 mt-2 font-bold uppercase tracking-widest">Recommended: Transparent PNG, High Quality</p>
                 </div>
               </div>
             </div>
 
-            {/* Review Categories Configuration */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
               <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
@@ -273,7 +271,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Form Question</label>
+                        <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Question</label>
                         <input 
                           type="text" 
                           value={cat.question}
@@ -299,7 +297,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       </div>
 
       <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl">
-        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.3</p>
+        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.4</p>
       </footer>
     </div>
   );
