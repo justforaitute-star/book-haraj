@@ -8,23 +8,37 @@ interface GalleryViewProps {
   onBack: () => void;
 }
 
-const PHOTOPRISM_URL = process.env.PHOTOPRISM_URL || 'https://photoprism.example.com';
-const PHOTOPRISM_API_KEY = process.env.PHOTOPRISM_API_KEY || '';
+const getEnv = (key: string): string => {
+  const searchKeys = [`VITE_${key}`, key, `REACT_APP_${key}`, `PUBLIC_${key}`];
+  try {
+    const metaEnv = (import.meta as any).env;
+    if (metaEnv) {
+      for (const sk of searchKeys) if (metaEnv[sk]) return metaEnv[sk];
+    }
+  } catch (e) {}
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      for (const sk of searchKeys) if ((process.env as any)[sk]) return (process.env as any)[sk];
+    }
+  } catch (e) {}
+  return '';
+};
+
+const PHOTOPRISM_URL = getEnv('PHOTOPRISM_URL') || 'https://photoprism.example.com';
+const PHOTOPRISM_API_KEY = getEnv('PHOTOPRISM_API_KEY') || '';
 
 const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) => {
   const [photoPrismImages, setPhotoPrismImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all images of this person from PhotoPrism
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!PHOTOPRISM_API_KEY || faceId === 'GUEST_ID' || faceId.startsWith('ERR')) {
+      if (!PHOTOPRISM_API_KEY || !faceId || faceId === 'GUEST_ID' || faceId.startsWith('ERR')) {
         setLoading(false);
         return;
       }
 
       try {
-        // Query PhotoPrism for photos with this specific Subject UID
         const res = await fetch(`${PHOTOPRISM_URL}/api/v1/photos?s=${faceId}&count=100`, {
           headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
         });
@@ -82,7 +96,6 @@ const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) =>
                 style={{ animationDelay: `${i * 100}ms` }}
               >
                 <div className="relative aspect-auto">
-                  {/* PhotoPrism thumbnail URL pattern */}
                   <img 
                     src={`${PHOTOPRISM_URL}/api/v1/t/${photo.Hash}/fit_2048?t=${PHOTOPRISM_API_KEY}`} 
                     alt="Expo Memory" 

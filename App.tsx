@@ -10,8 +10,25 @@ import GalleryView from './components/GalleryView.tsx';
 import Logo3 from './components/Logo3.tsx';
 import { supabase, isConfigured } from './lib/supabase.ts';
 
-const PHOTOPRISM_URL = process.env.PHOTOPRISM_URL || 'https://photoprism.example.com';
-const PHOTOPRISM_API_KEY = process.env.PHOTOPRISM_API_KEY || '';
+// Helper to get environment variables (reusing logic from supabase.ts)
+const getEnv = (key: string): string => {
+  const searchKeys = [`VITE_${key}`, key, `REACT_APP_${key}`, `PUBLIC_${key}`];
+  try {
+    const metaEnv = (import.meta as any).env;
+    if (metaEnv) {
+      for (const sk of searchKeys) if (metaEnv[sk]) return metaEnv[sk];
+    }
+  } catch (e) {}
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      for (const sk of searchKeys) if ((process.env as any)[sk]) return (process.env as any)[sk];
+    }
+  } catch (e) {}
+  return '';
+};
+
+const PHOTOPRISM_URL = getEnv('PHOTOPRISM_URL') || 'https://photoprism.example.com';
+const PHOTOPRISM_API_KEY = getEnv('PHOTOPRISM_API_KEY') || '';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
@@ -24,21 +41,25 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<string>('');
   
   const loadingTimeoutRef = useRef<number | null>(null);
 
-  // PhotoPrism Face Recognition Logic
+  // Robust PhotoPrism Face Recognition Polling
   const identifyFaceWithPhotoPrism = async (base64Photo: string): Promise<string> => {
-    if (!PHOTOPRISM_API_KEY) return 'GUEST_ID';
+    if (!PHOTOPRISM_API_KEY) {
+      console.warn("PhotoPrism API Key missing. Defaulting to Guest mode.");
+      return 'GUEST_ID';
+    }
     
     try {
+      setSubmissionStatus('Uploading to PhotoPrism...');
       const base64Data = base64Photo.split(',')[1];
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
       const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/jpeg' });
 
-      // 1. Upload to PhotoPrism
       const formData = new FormData();
       formData.append('file', blob, `kiosk_${Date.now()}.jpg`);
       
@@ -50,25 +71,30 @@ const App: React.FC = () => {
       
       if (!uploadRes.ok) throw new Error('PhotoPrism Upload Failed');
 
-      // 2. Trigger Indexing
+      setSubmissionStatus('Indexing Face Data...');
       await fetch(`${PHOTOPRISM_URL}/api/v1/index`, {
         method: 'POST',
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: '/', cleanup: false })
       });
 
-      // 3. Wait slightly for processing and search for the latest marker
-      // Note: In a production app, you'd poll until markers appear.
-      await new Promise(r => setTimeout(r, 2000));
-      
-      const searchRes = await fetch(`${PHOTOPRISM_URL}/api/v1/photos?count=1&order=added`, {
-        headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
-      });
-      const searchData = await searchRes.json();
-      
-      // Extract SubjectUID (the Face ID) from the markers of the most recent photo
-      if (searchData && searchData[0] && searchData[0].Subjects && searchData[0].Subjects.length > 0) {
-        return searchData[0].Subjects[0].UID;
+      // Poll for the SubjectUID. PhotoPrism takes a few moments to cluster faces.
+      setSubmissionStatus('Extracting Face Signature...');
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise(r => setTimeout(r, 2000)); // Wait 2s between polls
+        
+        const searchRes = await fetch(`${PHOTOPRISM_URL}/api/v1/photos?count=5&order=added`, {
+          headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
+        });
+        const searchData = await searchRes.json();
+        
+        if (searchData && Array.isArray(searchData)) {
+          // Look for the most recent photo that has subjects
+          const photoWithFace = searchData.find(p => p.Subjects && p.Subjects.length > 0);
+          if (photoWithFace) {
+            return photoWithFace.Subjects[0].UID;
+          }
+        }
       }
 
       return 'GUEST_ID';
@@ -123,6 +149,7 @@ const App: React.FC = () => {
     setStep(KioskStep.HOME);
     setCurrentReview({});
     setIsSubmitting(false);
+    setSubmissionStatus('');
     setGalleryFaceId(null);
   }, []);
 
@@ -143,20 +170,22 @@ const App: React.FC = () => {
   const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
     if (!supabase || isSubmitting) return;
     setIsSubmitting(true);
+    setSubmissionStatus('Initializing...');
 
     try {
       const rawPhoto = currentReview.photo || '';
-      // Step 1: Sync with PhotoPrism to get facial identification
-      // Step 2: Store in Supabase for the wall
+      
+      // Parallelize identifying face and uploading to supabase storage
       const [faceId, photoUrl] = await Promise.all([
         identifyFaceWithPhotoPrism(rawPhoto),
         uploadPhotoToStorage(rawPhoto)
       ]);
 
+      setSubmissionStatus('Finalizing Record...');
       const newReview: Partial<Review> = {
         name: details.name,
         photo: photoUrl,
-        face_id: faceId, // This is now the PhotoPrism Subject UID
+        face_id: faceId,
         ratings: details.ratings,
         comment: details.comment,
         timestamp: Date.now()
@@ -202,7 +231,10 @@ const App: React.FC = () => {
                 <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
                 <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
              </div>
-             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white animate-pulse">Consulting PhotoPrism Engine...</p>
+             <div className="text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white animate-pulse mb-2">Processing Story</p>
+                <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">{submissionStatus}</p>
+             </div>
           </div>
         ) : (
           <>
