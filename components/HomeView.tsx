@@ -10,6 +10,15 @@ interface HomeViewProps {
 const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [qrTick, setQrTick] = useState(Date.now());
+
+  // Update QR salt every 20 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQrTick(Date.now());
+    }, 20000);
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleFullscreen = () => {
     const doc = document.documentElement as any;
@@ -44,7 +53,11 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) =
     return url.toString();
   }, []);
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(remoteUrl)}&bgcolor=000000&color=ffffff`;
+  // Encodes the URL with a rotating timestamp to change the QR pattern
+  const qrCodeUrl = useMemo(() => {
+    const dynamicUrl = `${remoteUrl}${remoteUrl.includes('?') ? '&' : '?'}salt=${qrTick}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicUrl)}&bgcolor=000000&color=ffffff`;
+  }, [remoteUrl, qrTick]);
 
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
@@ -90,7 +103,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) =
 
           <div className="group bg-white/5 backdrop-blur-md p-6 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-8 w-full max-w-md transition-all hover:border-white/40 hover:bg-white/10 animate-fade-in" style={{ animationDelay: '0.6s' }}>
             <div className="p-4 bg-white rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-500 relative">
-              <img src={qrCodeUrl} alt="Scan to Review" className="w-20 h-20 mix-blend-multiply opacity-90" />
+              <img key={qrTick} src={qrCodeUrl} alt="Scan to Review" className="w-20 h-20 mix-blend-multiply opacity-90 animate-fade-in" />
               <div className="absolute -inset-1 border-2 border-white/20 rounded-2xl animate-pulse"></div>
             </div>
             <div className="text-left">

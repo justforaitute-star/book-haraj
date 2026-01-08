@@ -58,6 +58,13 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Set up polling to always have the latest reviews (every 10 seconds)
+  useEffect(() => {
+    fetchReviews();
+    const interval = setInterval(fetchReviews, 10000);
+    return () => clearInterval(interval);
+  }, [fetchReviews]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
@@ -79,9 +86,7 @@ const App: React.FC = () => {
     } else if (mode === 'display') {
       setIsDisplayMode(true);
     }
-
-    fetchReviews();
-  }, [fetchReviews]);
+  }, []);
 
   const identifyFaceWithPhotoPrism = async (base64Photo: string): Promise<string> => {
     if (!PHOTOPRISM_API_KEY) return 'GUEST_ID';

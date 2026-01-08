@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 
 interface ThanksViewProps {
   onFinish: () => void;
@@ -8,6 +8,16 @@ interface ThanksViewProps {
 }
 
 const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, faceId }) => {
+  const [qrTick, setQrTick] = useState(Date.now());
+
+  // Update QR salt every 20 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQrTick(Date.now());
+    }, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
   const personalizedUrl = useMemo(() => {
     const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('mode', 'gallery');
@@ -15,7 +25,10 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
     return url.toString();
   }, [faceId]);
 
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(personalizedUrl)}&bgcolor=ffffff&color=000000&margin=2`;
+  const qrCodeImageUrl = useMemo(() => {
+    const dynamicUrl = `${personalizedUrl}${personalizedUrl.includes('?') ? '&' : '?'}salt=${qrTick}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dynamicUrl)}&bgcolor=ffffff&color=000000&margin=2`;
+  }, [personalizedUrl, qrTick]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(personalizedUrl);
@@ -40,7 +53,7 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
 
       <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative w-full">
         <div className="relative p-3 bg-white rounded-3xl overflow-hidden shadow-inner">
-          <img src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'}`} />
+          <img key={qrTick} src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'} animate-fade-in`} />
         </div>
         
         <div className="text-center w-full">
