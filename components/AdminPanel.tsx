@@ -47,7 +47,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       setEditingReview(null);
       setSearch('');
     } catch (err: any) {
-      alert(`Update failed: ${err.message}`);
+      alert(`Update failed: ${err.message || 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -68,7 +68,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       setSearch('');
       setEditingReview(null);
     } catch (err: any) {
-      alert(`Deletion failed: ${err.message}`);
+      alert(`Deletion failed: ${err.message || 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -80,13 +80,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     setIsProcessing(true);
     try {
       const fileName = `logo_${Date.now()}.${file.name.split('.').pop()}`;
+      // Note: Ensure the 'photos' bucket is set to PUBLIC in Supabase Dashboard
       const { data, error } = await supabase.storage.from('photos').upload(fileName, file);
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
       setLocalConfig(prev => ({ ...prev, logo_url: publicUrl }));
-      alert("Logo uploaded to storage. Don't forget to Save Config!");
+      alert("Logo uploaded to storage. Click 'SAVE GLOBAL CONFIGURATION' to apply permanently.");
     } catch (err: any) {
-      alert(`Logo upload failed: ${err.message}`);
+      alert(`Logo upload failed: ${err.message || 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -96,17 +97,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     if (!supabase) return;
     setIsProcessing(true);
     try {
-      // We upsert the config into row id=1
+      // Upsert into row id=1. Ensure table 'settings' exists with columns: id (int4), logo_url (text), categories (jsonb)
       const { error } = await supabase.from('settings').upsert({
         id: 1,
         logo_url: localConfig.logo_url,
         categories: localConfig.categories
       });
+      
       if (error) throw error;
       alert("Configuration saved successfully!");
       onUpdate();
     } catch (err: any) {
-      alert(`Config save failed: ${err.message}`);
+      // Improved error reporting to catch non-standard error objects
+      const errorMessage = err?.message || err?.error_description || (typeof err === 'string' ? err : JSON.stringify(err));
+      alert(`Config save failed: ${errorMessage}`);
+      console.error("Supabase Save Error:", err);
     } finally {
       setIsProcessing(false);
     }
@@ -224,7 +229,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
               </h3>
               <div className="flex items-center gap-8">
                 <div className="w-24 h-24 bg-black rounded-2xl border border-white/10 flex items-center justify-center p-2 overflow-hidden">
-                   <img src={localConfig.logo_url} alt="Current Logo" className="max-w-full max-h-full object-contain filter grayscale" />
+                   <img src={localConfig.logo_url} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
                 </div>
                 <div className="flex-1">
                   <input 
@@ -238,9 +243,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full py-4 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all"
                   >
-                    UPLOAD NEW LOGO
+                    {localConfig.logo_url === 'logo.png' ? 'UPLOAD STATION LOGO' : 'REPLACE LOGO'}
                   </button>
-                  <p className="text-[8px] text-slate-600 mt-2 font-bold uppercase tracking-widest">Recommended: Transparent PNG, High Contrast</p>
+                  <p className="text-[8px] text-slate-600 mt-2 font-bold uppercase tracking-widest">Recommended: Transparent PNG, High Quality</p>
                 </div>
               </div>
             </div>
@@ -255,7 +260,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                 {localConfig.categories.map((cat, idx) => (
                   <div key={cat.id} className="p-6 bg-black/40 rounded-2xl border border-white/5 space-y-4">
                     <div className="flex items-center justify-between">
-                       <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Category ID: {cat.id}</span>
+                       <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Category: {cat.id}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -287,14 +292,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
               disabled={isProcessing}
               className="w-full py-6 bg-white text-black rounded-[24px] font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
             >
-              {isProcessing ? 'APPLYING CHANGES...' : 'SAVE GLOBAL CONFIGURATION'}
+              {isProcessing ? 'APPLYING CONFIG...' : 'SAVE GLOBAL CONFIGURATION'}
             </button>
           </div>
         )}
       </div>
 
       <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl">
-        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.2</p>
+        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.3</p>
       </footer>
     </div>
   );
