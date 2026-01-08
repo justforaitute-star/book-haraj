@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskStep, Review, DetailedRatings } from './types.ts';
 import HomeView from './components/HomeView.tsx';
@@ -17,6 +18,7 @@ const App: React.FC = () => {
   const [singleReviewId, setSingleReviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const loadingTimeoutRef = useRef<number | null>(null);
 
@@ -118,9 +120,11 @@ const App: React.FC = () => {
   const resetKiosk = useCallback(() => {
     setStep(KioskStep.HOME);
     setCurrentReview({});
+    setIsSubmitting(false);
   }, []);
 
   const handleStart = () => setStep(KioskStep.CAMERA);
+  
   const handlePhotoCapture = (photo: string) => {
     setCurrentReview(prev => ({ ...prev, photo }));
     setStep(KioskStep.FORM);
@@ -134,18 +138,67 @@ const App: React.FC = () => {
     window.history.pushState({}, '', url.toString());
   };
 
-  const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
-    if (!supabase) return;
-
-    const newReview: Partial<Review> = {
-      name: details.name,
-      photo: currentReview.photo || '',
-      ratings: details.ratings,
-      comment: details.comment,
-      timestamp: Date.now()
-    };
+  // Helper to upload base64 to Supabase Storage
+  const uploadPhotoToStorage = async (base64: string): Promise<string> => {
+    if (!supabase) return '';
     
     try {
+      // 1. Convert base64 to Blob
+      const base64Data = base64.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+      // 2. Generate unique filename
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}.jpg`;
+      
+      // 3. Upload to "photos" bucket
+      const { data, error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 4. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('photos')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Storage upload failed:", err);
+      throw err;
+    }
+  };
+
+  const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
+    if (!supabase || isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      let finalPhotoPath = '';
+      
+      // If we have a captured base64 photo, upload it to storage first
+      if (currentReview.photo && currentReview.photo.startsWith('data:image')) {
+        finalPhotoPath = await uploadPhotoToStorage(currentReview.photo);
+      }
+
+      const newReview: Partial<Review> = {
+        name: details.name,
+        photo: finalPhotoPath, // This is now a URL, not base64
+        ratings: details.ratings,
+        comment: details.comment,
+        timestamp: Date.now()
+      };
+      
       const { data, error } = await supabase
         .from('reviews')
         .insert([newReview])
@@ -158,7 +211,8 @@ const App: React.FC = () => {
         fetchReviews();
       }
     } catch (err: any) {
-      alert(`Failed to save: ${err.message}`);
+      alert(`Submission failed: ${err.message || 'Check your internet connection'}`);
+      setIsSubmitting(false);
     }
   };
 
@@ -212,9 +266,10 @@ const App: React.FC = () => {
       )}
 
       <main className="flex-1 w-full flex items-center justify-center px-6 relative z-10 overflow-hidden">
-        {loading ? (
+        {loading || isSubmitting ? (
           <div className="flex flex-col items-center gap-6 animate-fade-in">
             <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+            {isSubmitting && <p className="text-xs font-black uppercase tracking-[0.4em] text-white/40 animate-pulse">Uploading Story...</p>}
           </div>
         ) : (
           <>
