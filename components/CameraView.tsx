@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 
 interface CameraViewProps {
@@ -107,17 +106,16 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
   if (error) {
     return (
       <div className="flex flex-col items-center bg-white p-12 rounded-[40px] shadow-2xl max-w-sm text-center">
-        <h3 className="text-xl font-bold mb-4 text-slate-900">Permission Needed</h3>
+        <h3 className="text-xl font-bold mb-4 text-black">Permission Needed</h3>
         <p className="text-slate-500 mb-8 text-sm">{error}</p>
-        <button onClick={() => window.location.reload()} className="px-10 py-4 bg-slate-900 text-white rounded-xl font-bold">Refresh</button>
+        <button onClick={() => window.location.reload()} className="px-10 py-4 bg-black text-white rounded-xl font-bold">Refresh</button>
       </div>
     );
   }
 
   return (
-    <div className={`relative flex flex-col items-center w-full ${isRemote ? 'max-w-md h-full' : 'max-w-xl aspect-[9/16]'} bg-slate-900 overflow-hidden shadow-2xl border-[12px] border-white ${isRemote ? 'rounded-none' : 'rounded-[60px]'}`}>
+    <div className={`relative flex flex-col items-center w-full ${isRemote ? 'max-w-md h-full' : 'max-w-xl aspect-[9/16]'} bg-black overflow-hidden shadow-2xl border-[12px] border-white ${isRemote ? 'rounded-none' : 'rounded-[60px]'}`}>
       
-      {/* Back Button */}
       <button 
         onClick={onCancel}
         className="absolute top-8 left-8 z-[60] w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-white/40 transition-all shadow-xl"
@@ -154,7 +152,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
             onClick={startPhotoSequence}
             className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-90 transition-all group border-[8px] border-white/20"
           >
-            <div className="w-16 h-16 bg-amber-800 rounded-full flex items-center justify-center group-hover:bg-amber-900 transition-colors">
+            <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.103-1.103A2 2 0 0011.188 3H8.812a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
               </svg>

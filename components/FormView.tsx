@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DetailedRatings } from '../types.ts';
 
@@ -43,7 +42,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
     setRatings(prev => ({ ...prev, [category]: value }));
     setAnimatingStar(value);
     
-    // Auto-advance after animation completes
     setTimeout(() => {
       setAnimatingStar(null);
       nextStep();
@@ -61,7 +59,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     } else {
-      onCancel(); // Go back to camera if on first step
+      onCancel(); 
     }
   };
 
@@ -75,9 +73,8 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
   };
 
   return (
-    <div className={`bg-[#020617] flex flex-col w-full max-w-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative ${isRemote ? 'h-full rounded-none' : 'h-[85vh] rounded-[40px] border border-white/10'} overflow-hidden animate-fade-in`}>
+    <div className={`bg-black flex flex-col w-full max-w-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative ${isRemote ? 'h-full rounded-none' : 'h-[85vh] rounded-[40px] border border-white/10'} overflow-hidden animate-fade-in`}>
       
-      {/* Back Button Overlay */}
       <button 
         onClick={prevStep}
         className="absolute top-8 left-8 z-40 w-12 h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white border border-white/10 transition-all shadow-xl"
@@ -87,14 +84,13 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
         </svg>
       </button>
 
-      {/* Step Indicator Top Bar */}
       <div className="absolute top-8 left-24 right-8 flex justify-between items-center z-30">
-        <p className="text-[#ffb83d] text-[12px] font-black uppercase tracking-[0.2em] opacity-80">
+        <p className="text-white text-[12px] font-black uppercase tracking-[0.2em] opacity-80">
           STEP {currentStep + 1} OF {totalSteps}
         </p>
         <button 
           onClick={onCancel} 
-          className="w-12 h-12 bg-red-500/10 hover:bg-red-500/20 rounded-full flex items-center justify-center text-red-400 transition-all border border-red-500/20"
+          className="w-12 h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-400 transition-all border border-white/10"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
@@ -104,13 +100,12 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
 
       <div className="flex-1 flex flex-col items-center justify-center px-10 md:px-20 pt-24 pb-12">
         
-        {/* Progress Bar Dots */}
         <div className="flex gap-2.5 mb-20 w-full max-w-md justify-center">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div 
               key={i} 
               className={`h-[4px] flex-1 rounded-full transition-all duration-700 ${
-                i <= currentStep ? 'bg-[#ffb83d] shadow-[0_0_15px_rgba(255,184,61,0.5)]' : 'bg-slate-800'
+                i <= currentStep ? 'bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'bg-slate-800'
               }`}
             />
           ))}
@@ -118,7 +113,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
 
         <div className="w-full transition-all duration-500 transform" key={currentStep}>
           
-          {/* Step 0: Name Entry */}
           {currentStep === 0 && (
             <div className="space-y-8 text-center animate-fade-in-up">
               <h2 className="text-slate-500 text-[13px] font-black uppercase tracking-[0.4em]">REGISTRATION</h2>
@@ -134,13 +128,12 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && name.trim() && nextStep()}
                   placeholder="TYPE NAME HERE..."
-                  className="w-full text-center text-4xl md:text-5xl py-4 border-b-2 border-slate-800 focus:border-[#ffb83d] outline-none transition-all placeholder:text-slate-800 font-[800] uppercase bg-transparent text-white"
+                  className="w-full text-center text-4xl md:text-5xl py-4 border-b-2 border-slate-800 focus:border-white outline-none transition-all placeholder:text-slate-800 font-[800] uppercase bg-transparent text-white"
                 />
               </div>
             </div>
           )}
 
-          {/* Steps 1-8: Detailed Ratings */}
           {currentStep > 0 && currentStep <= RATING_CATEGORIES.length && (
             <div className="space-y-12 text-center animate-fade-in-up">
               <h2 className="text-slate-500 text-[13px] font-black uppercase tracking-[0.4em]">
@@ -164,7 +157,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                       onClick={() => handleRatingChange(categoryId, star)}
                       className={`text-7xl md:text-9xl transition-all duration-300 transform hover:scale-110 active:scale-90 ${
                         isActive 
-                          ? 'text-[#ffb83d] drop-shadow-[0_0_20px_rgba(255,184,61,0.5)]' 
+                          ? 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]' 
                           : 'text-slate-800 hover:text-slate-700'
                       } ${isAnimating ? 'animate-star-pop' : ''}`}
                     >
@@ -176,7 +169,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
             </div>
           )}
 
-          {/* Final Step: Comment */}
           {currentStep === totalSteps - 1 && (
             <div className="space-y-10 text-center animate-fade-in-up">
               <h2 className="text-slate-500 text-[13px] font-black uppercase tracking-[0.4em]">FEEDBACK</h2>
@@ -190,7 +182,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="OPTIONAL COMMENT..."
-                  className="w-full text-center text-2xl md:text-3xl py-4 border-b-2 border-slate-800 focus:border-[#ffb83d] outline-none transition-all placeholder:text-slate-800 resize-none bg-transparent font-bold tracking-tight text-white"
+                  className="w-full text-center text-2xl md:text-3xl py-4 border-b-2 border-slate-800 focus:border-white outline-none transition-all placeholder:text-slate-800 resize-none bg-transparent font-bold tracking-tight text-white"
                 />
               </div>
             </div>
@@ -198,7 +190,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
         </div>
       </div>
 
-      {/* Persistent Navigation Buttons */}
       <div className="px-10 pb-12 flex gap-6">
         <button
           onClick={prevStep}
@@ -215,7 +206,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
           disabled={currentStep === 0 && !name.trim()}
           className={`flex-1 py-6 rounded-2xl font-black uppercase tracking-[0.2em] transition-all text-[12px] flex items-center justify-center gap-3 ${
             (currentStep === totalSteps - 1) || (currentStep > 0 && currentStep <= RATING_CATEGORIES.length && ratings[RATING_CATEGORIES[currentStep-1].id as keyof DetailedRatings] > 0)
-            ? 'bg-[#ffb83d] text-slate-900 shadow-xl shadow-[#ffb83d]/20 hover:scale-[1.02]' 
+            ? 'bg-white text-black shadow-xl hover:scale-[1.02]' 
             : 'bg-slate-800 text-slate-500'
           }`}
         >

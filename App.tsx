@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskStep, Review, DetailedRatings } from './types.ts';
 import HomeView from './components/HomeView.tsx';
@@ -51,11 +50,10 @@ const App: React.FC = () => {
     if (!window.confirm("CRITICAL ACTION: Are you sure you want to delete ALL reviews from the database? This cannot be undone.")) return;
 
     try {
-      // In Supabase, deleting with a filter that matches all rows is the common way to clear a table
       const { error: deleteError } = await supabase
         .from('reviews')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Matches all valid UUIDs
+        .neq('id', '00000000-0000-0000-0000-000000000000'); 
 
       if (deleteError) throw deleteError;
       
@@ -90,7 +88,7 @@ const App: React.FC = () => {
       const channel = supabase
         .channel('public:reviews')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => {
-          fetchReviews(); // Re-fetch on any change for consistency
+          fetchReviews(); 
         })
         .subscribe();
 
@@ -165,17 +163,17 @@ const App: React.FC = () => {
 
   if (!isConfigured) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617] text-white">
+      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-black text-white">
         <h1 className="text-2xl font-black uppercase mb-4">Connection Required</h1>
-        <p className="text-slate-400 mb-8">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.</p>
-        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold uppercase text-[11px] tracking-widest">Retry</button>
+        <p className="text-slate-400 mb-8">Database credentials missing.</p>
+        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-black rounded-xl font-bold uppercase text-[11px] tracking-widest">Retry</button>
       </div>
     );
   }
 
   if (error && reviews.length === 0 && !loading) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-[#020617] text-white">
+      <div className="h-full w-full flex flex-col items-center justify-center p-10 text-center bg-black text-white">
         <h2 className="text-xl font-black uppercase mb-2">Database Error</h2>
         <p className="text-slate-500 text-xs mb-8 max-w-sm">{error}</p>
         <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest">Refresh</button>
@@ -185,7 +183,7 @@ const App: React.FC = () => {
 
   if (isDisplayMode) {
     return (
-      <div className="h-full w-full relative kiosk-bg overflow-hidden flex flex-col text-slate-100">
+      <div className="h-full w-full relative kiosk-bg overflow-hidden flex flex-col text-white">
         <ReviewWall 
           reviews={reviews} 
           fullScreen 
@@ -208,7 +206,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`h-full w-full relative overflow-hidden select-none flex flex-col ${isRemoteMode ? 'bg-slate-950 text-white' : 'kiosk-bg text-slate-100'}`}>
+    <div className={`h-full w-full relative overflow-hidden select-none flex flex-col ${isRemoteMode ? 'bg-black text-white' : 'kiosk-bg text-white'}`}>
       {!isRemoteMode && step === KioskStep.HOME && (
         <header className="pt-16 pb-2 w-full flex flex-col items-center z-20 flex-shrink-0 px-8">
           <Logo3 className="max-w-full" />
@@ -218,7 +216,7 @@ const App: React.FC = () => {
       <main className="flex-1 w-full flex items-center justify-center px-6 relative z-10 overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center gap-6 animate-fade-in">
-            <div className="w-16 h-16 border-4 border-[#ffb83d] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
           <>
@@ -233,11 +231,11 @@ const App: React.FC = () => {
       {!isRemoteMode && step === KioskStep.HOME && (
         <footer className="pt-4 pb-14 w-full flex flex-col items-center z-20 flex-shrink-0">
            <div className="flex items-center gap-2">
-             <div className="w-2 h-2 bg-[#ffb83d] rounded-[1px]"></div>
+             <div className="w-2 h-2 bg-white rounded-[1px]"></div>
              <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.6em]">
                LIVE VISITOR FEED • {reviews.length} POSTS
              </div>
-             <div className="w-2 h-2 bg-[#ffb83d] rounded-[1px]"></div>
+             <div className="w-2 h-2 bg-white rounded-[1px]"></div>
            </div>
         </footer>
       )}

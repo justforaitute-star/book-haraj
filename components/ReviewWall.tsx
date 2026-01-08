@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Review } from '../types.ts';
 
@@ -65,15 +64,15 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
   }, [filteredReviews, singleReviewId]);
 
   return (
-    <div className={`relative flex flex-col items-center w-full h-full overflow-hidden bg-[#020617] ${fullScreen ? 'p-0' : 'p-4'}`}>
+    <div className={`relative flex flex-col items-center w-full h-full overflow-hidden bg-black ${fullScreen ? 'p-0' : 'p-4'}`}>
       
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]">
-        <div className="absolute top-20 left-[10%] w-20 h-20 bg-[#ffb83d] rotate-12"></div>
-        <div className="absolute bottom-40 right-[15%] w-40 h-40 bg-[#ffb83d] -rotate-6"></div>
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.02]">
+        <div className="absolute top-20 left-[10%] w-20 h-20 bg-white rotate-12"></div>
+        <div className="absolute bottom-40 right-[15%] w-40 h-40 bg-white -rotate-6"></div>
       </div>
 
       {fullScreen && (
-        <div className="relative z-20 w-full pt-6 pb-6 px-12 animate-fade-in flex-shrink-0 bg-[#020617]/90 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between">
+        <div className="relative z-20 w-full pt-6 pb-6 px-12 animate-fade-in flex-shrink-0 bg-black/90 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-6">
             {onDeleteAll && !singleReviewId && (
               <button 
@@ -89,10 +88,10 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
             )}
             <div className="flex flex-col items-start">
               <h1 className="text-3xl font-[900] text-slate-100 tracking-tighter uppercase leading-none italic">
-                {singleReviewId ? 'YOUR' : 'THE'} <span className="text-[#ffb83d]">{singleReviewId ? 'REVIEW' : 'FEED'}</span>
+                {singleReviewId ? 'YOUR' : 'THE'} <span className="text-white">{singleReviewId ? 'REVIEW' : 'FEED'}</span>
               </h1>
               <div className="flex items-center gap-2 mt-2">
-                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                 <div className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">LIVE SYNC ACTIVE</p>
               </div>
             </div>
@@ -105,8 +104,8 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
                 <p className="text-[11px] font-black text-white uppercase tracking-tighter leading-none">RATING</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[#ffb83d] text-3xl font-black">{averageRating}</span>
-                <span className="text-[#ffb83d] text-2xl">★</span>
+                <span className="text-white text-3xl font-black">{averageRating}</span>
+                <span className="text-white text-2xl">★</span>
               </div>
             </div>
           )}
@@ -136,13 +135,13 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
                     alt={review.name} 
                     className="w-full h-full object-cover opacity-90 transition-transform duration-[6000ms] group-hover:scale-110"
                   />
-                  <div className="absolute top-5 left-5 bg-[#ffb83d] px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border-2 border-slate-900">
-                    <span className="text-slate-950 text-sm leading-none font-black">★ {overallRating}.0</span>
+                  <div className="absolute top-5 left-5 bg-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border-2 border-black">
+                    <span className="text-black text-sm leading-none font-black">★ {overallRating}.0</span>
                   </div>
                 </div>
 
                 <div className="p-10">
-                  <div className="w-4 h-1 bg-[#ffb83d] rounded-full mb-6"></div>
+                  <div className="w-4 h-1 bg-white rounded-full mb-6"></div>
                   <p className="text-white text-xl leading-[1.6] font-medium tracking-tight mb-10 italic">
                     "{review.comment || 'Amazing experience at the expo!'}"
                   </p>
@@ -150,7 +149,7 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
                   <div className="flex items-center justify-between pt-8 border-t border-white/5">
                     <div className="min-w-0">
                       <h4 className="font-black text-slate-100 text-lg uppercase tracking-tighter truncate">{review.name}</h4>
-                      <p className="text-[10px] font-black text-[#ffb83d]/50 uppercase tracking-[0.4em] mt-1">VISITOR FEEDBACK</p>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">VISITOR FEEDBACK</p>
                     </div>
                     <div className="flex-shrink-0 w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -165,7 +164,7 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center py-20 animate-fade-in">
             <div className="w-20 h-20 bg-slate-900 rounded-[30px] shadow-2xl flex items-center justify-center mb-8 border border-white/5 animate-pulse">
-               <div className="w-6 h-6 bg-[#ffb83d] rounded-sm"></div>
+               <div className="w-6 h-6 bg-white rounded-sm"></div>
             </div>
             <h3 className="text-xl font-black text-slate-600 uppercase tracking-[0.6em]">
               WAITING FOR UPDATES
@@ -173,11 +172,6 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
           </div>
         )}
       </div>
-
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 };
