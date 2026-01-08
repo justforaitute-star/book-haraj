@@ -76,40 +76,45 @@ const App: React.FC = () => {
     if (!PHOTOPRISM_API_KEY) return 'GUEST_ID';
     
     try {
-      setSubmissionStatus('Syncing with PhotoPrism...');
+      const baseUrl = PHOTOPRISM_URL.replace(/\/$/, '');
+      setSubmissionStatus('Connecting to AI Engine...');
+      
       const base64Data = base64Photo.split(',')[1];
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Uint8Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
       const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
 
-      // 1. Upload
+      // 1. Upload to Import Folder
       const formData = new FormData();
       formData.append('file', blob, `kiosk_${Date.now()}.jpg`);
-      await fetch(`${PHOTOPRISM_URL}/api/v1/import/upload`, {
+      await fetch(`${baseUrl}/api/v1/import/upload`, {
         method: 'POST',
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY },
         body: formData
       });
 
-      // 2. Index
-      setSubmissionStatus('Deep Face Analysis...');
-      await fetch(`${PHOTOPRISM_URL}/api/v1/index`, {
+      // 2. Trigger Indexing
+      setSubmissionStatus('Scanning Face Signature...');
+      await fetch(`${baseUrl}/api/v1/index`, {
         method: 'POST',
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: '/', cleanup: false })
       });
 
-      // 3. Poll for Markers (SubjectUID)
-      for (let i = 0; i < 6; i++) {
-        await new Promise(r => setTimeout(r, 1500));
-        const res = await fetch(`${PHOTOPRISM_URL}/api/v1/photos?count=10&order=added`, {
+      // 3. Poll for the specific SubjectUID (Markers)
+      // We check for several seconds to allow the recognition cluster to update
+      for (let i = 0; i < 8; i++) {
+        setSubmissionStatus(`Authenticating Face (${i+1}/8)...`);
+        await new Promise(r => setTimeout(r, 2000));
+        
+        const res = await fetch(`${baseUrl}/api/v1/photos?count=15&order=added`, {
           headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
         });
         const photos = await res.json();
         
         if (Array.isArray(photos)) {
-          // Look for photos that have been processed and tagged with subjects
+          // Look for any photo processed in the last batch with a face marker
           for (const p of photos) {
             if (p.Markers && Array.isArray(p.Markers)) {
               const marker = p.Markers.find((m: any) => m.SubjectUID && m.Type === 'face');
@@ -118,9 +123,10 @@ const App: React.FC = () => {
           }
         }
       }
-      return `GUEST_${Math.random().toString(36).substring(2, 7)}`.toUpperCase();
+      // If no face found, generate a persistent guest ID based on time
+      return `GUEST_${Date.now().toString(36).toUpperCase()}`;
     } catch (err) {
-      console.error("PhotoPrism error:", err);
+      console.error("PhotoPrism identification error:", err);
       return 'GUEST_ID';
     }
   };
@@ -132,7 +138,7 @@ const App: React.FC = () => {
     const byteNumbers = new Uint8Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
     const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
-    const fileName = `${Date.now()}.jpg`;
+    const fileName = `${Date.now()}_review.jpg`;
     await supabase.storage.from('photos').upload(fileName, blob);
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
     return publicUrl;
@@ -141,10 +147,11 @@ const App: React.FC = () => {
   const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
     if (!supabase || isSubmitting) return;
     setIsSubmitting(true);
-    setSubmissionStatus('Starting processing...');
+    setSubmissionStatus('Initializing...');
 
     try {
       const rawPhoto = currentReview.photo || '';
+      // Step 1: AI Analysis & DB Storage in parallel
       const [faceId, photoUrl] = await Promise.all([
         identifyFaceWithPhotoPrism(rawPhoto),
         uploadToSupabase(rawPhoto)
@@ -159,17 +166,16 @@ const App: React.FC = () => {
         timestamp: Date.now()
       };
 
-      setSubmissionStatus('Saving memory...');
+      setSubmissionStatus('Saving Memory...');
       const { data, error } = await supabase.from('reviews').insert([newReview]).select();
       
       if (error) {
-        // Fallback if face_id column is missing in DB
-        console.warn("DB Insert failed, retrying without face_id column...");
+        // Fallback for missing column schema cache
         const fallbackReview = { ...newReview };
         delete (fallbackReview as any).face_id;
-        const { data: fallbackData, error: fbError } = await supabase.from('reviews').insert([fallbackReview]).select();
+        const { data: fbData, error: fbError } = await supabase.from('reviews').insert([fallbackReview]).select();
         if (fbError) throw fbError;
-        if (fallbackData) setCurrentReview({ ...fallbackData[0], face_id: faceId });
+        if (fbData) setCurrentReview({ ...fbData[0], face_id: faceId });
       } else if (data) {
         setCurrentReview(data[0]);
       }

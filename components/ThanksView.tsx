@@ -17,6 +17,11 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
 
   const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(personalizedUrl)}&bgcolor=ffffff&color=000000&margin=2`;
 
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(personalizedUrl);
+    alert("Gallery link copied to clipboard!");
+  };
+
   return (
     <div className="text-center flex flex-col items-center px-6 animate-fade-in max-w-sm mx-auto">
       <div className={`mb-8 ${isRemote ? 'w-16 h-16' : 'w-24 h-24'} bg-white rounded-[24px] flex items-center justify-center shadow-2xl animate-fade-in-up`}>
@@ -33,14 +38,30 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
         Personal gallery generated
       </p>
 
-      <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative">
+      <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative w-full">
         <div className="relative p-3 bg-white rounded-3xl overflow-hidden shadow-inner">
           <img src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'}`} />
         </div>
-        <div className="text-center">
-          <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-1">SCAN FOR HISTORY</h4>
-          <p className="text-[9px] text-slate-500 font-medium uppercase italic max-w-[180px] mx-auto">See all photos identified by your face signature</p>
+        
+        <div className="text-center w-full">
+          <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-2">SCAN FOR HISTORY</h4>
+          
+          {/* Displaying the URL under the QR code */}
+          <div className="mt-2 group relative">
+            <div 
+              onClick={copyToClipboard}
+              className="bg-black/40 border border-white/10 rounded-xl p-3 cursor-pointer hover:bg-black/60 transition-all active:scale-95"
+            >
+              <p className="text-[8px] text-slate-400 font-mono break-all line-clamp-2 uppercase tracking-tight">
+                {personalizedUrl}
+              </p>
+            </div>
+            <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.2em] mt-2 group-hover:text-white/40 transition-colors">Tap link to copy</p>
+          </div>
+
+          <p className="text-[9px] text-slate-500 font-medium uppercase italic max-w-[180px] mx-auto mt-4">See all photos identified by your face signature</p>
         </div>
+
         <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white/20"></div>
         <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white/20"></div>
         <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white/20"></div>
