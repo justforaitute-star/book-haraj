@@ -1,23 +1,14 @@
-import React, { useState } from 'react';
-import { DetailedRatings } from '../types.ts';
+
+import React, { useState, useMemo } from 'react';
+import { DetailedRatings, RatingCategory } from '../types.ts';
 
 interface FormViewProps {
   photo: string;
+  categories: RatingCategory[];
   onSubmit: (details: { name: string; ratings: DetailedRatings; comment: string }) => void;
   onCancel: () => void;
   isRemote?: boolean;
 }
-
-const RATING_CATEGORIES = [
-  { id: 'books', label: 'Book Availability', question: 'How was the selection?' },
-  { id: 'venue', label: 'Venue Arrangement', question: 'Layout of the venue?' },
-  { id: 'collection', label: 'Ease of Collection', question: 'Collection process?' },
-  { id: 'authors', label: 'Author Sessions', question: 'Enjoy the sessions?' },
-  { id: 'food', label: 'Food Stalls', question: 'Food & Refreshments?' },
-  { id: 'artibhition', label: 'Artibhition', question: 'The Artibhition program?' },
-  { id: 'coffee', label: 'Book a Coffee', question: 'Coffee experience?' },
-  { id: 'overall', label: 'Overall Experience', question: 'Your final verdict?' },
-] as const;
 
 const COMMENT_SUGGESTIONS = [
   "Amazing collection!",
@@ -27,7 +18,6 @@ const COMMENT_SUGGESTIONS = [
   "Loved it!",
 ];
 
-// Custom Rounded Star Component with soft curved corners
 const RoundedStar = ({ active, animating, sizeClass }: { active: boolean; animating: boolean; sizeClass: string }) => (
   <svg 
     viewBox="0 0 24 24" 
@@ -41,27 +31,22 @@ const RoundedStar = ({ active, animating, sizeClass }: { active: boolean; animat
   </svg>
 );
 
-const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote = false }) => {
+const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCancel, isRemote = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   
-  const [ratings, setRatings] = useState<DetailedRatings>({
-    books: 0,
-    venue: 0,
-    collection: 0,
-    authors: 0,
-    food: 0,
-    artibhition: 0,
-    coffee: 0,
-    overall: 0,
+  const [ratings, setRatings] = useState<DetailedRatings>(() => {
+    const initial: DetailedRatings = {};
+    categories.forEach(c => initial[c.id] = 0);
+    return initial;
   });
 
-  const totalSteps = RATING_CATEGORIES.length + 2; 
+  const totalSteps = categories.length + 2; 
 
-  const handleRatingChange = (category: keyof DetailedRatings, value: number) => {
-    setRatings(prev => ({ ...prev, [category]: value }));
+  const handleRatingChange = (categoryId: string, value: number) => {
+    setRatings(prev => ({ ...prev, [categoryId]: value }));
     setAnimatingStar(value);
     setTimeout(() => {
       setAnimatingStar(null);
@@ -103,7 +88,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
   return (
     <div className={`bg-black flex flex-col w-full relative transition-all duration-500 ${isRemote ? 'h-full max-w-none' : 'h-[85vh] max-w-4xl rounded-[40px] border border-white/10 shadow-2xl'} overflow-hidden animate-fade-in`}>
       
-      {/* Mini Progress Header */}
       <div className="absolute top-0 left-0 right-0 z-40 px-6 pt-6 pb-2 flex items-center justify-between">
         <button onClick={prevStep} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center text-white border border-white/10">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,19 +134,19 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
             </div>
           )}
 
-          {currentStep > 0 && currentStep <= RATING_CATEGORIES.length && (
+          {currentStep > 0 && currentStep <= categories.length && (
             <div className="space-y-6 text-center animate-fade-in-up">
               <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">
-                {RATING_CATEGORIES[currentStep - 1].label}
+                {categories[currentStep - 1].label}
               </h2>
               <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-tight max-w-xs mx-auto`}>
-                {RATING_CATEGORIES[currentStep - 1].question}
+                {categories[currentStep - 1].question}
               </h3>
               
               <div className={`flex justify-center ${isRemote ? 'gap-2' : 'gap-6'} pt-4`}>
                 {[1, 2, 3, 4, 5].map((star) => {
-                  const categoryId = RATING_CATEGORIES[currentStep - 1].id as keyof DetailedRatings;
-                  const currentRating = ratings[categoryId];
+                  const category = categories[currentStep - 1];
+                  const currentRating = ratings[category.id] || 0;
                   const isActive = star <= currentRating;
                   const isAnimating = animatingStar === star;
                   
@@ -170,7 +154,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
                     <button
                       key={star}
                       type="button"
-                      onClick={() => handleRatingChange(categoryId, star)}
+                      onClick={() => handleRatingChange(category.id, star)}
                       className={`${isRemote ? 'w-10 h-10' : 'w-20 h-20'} transition-all active:scale-90`}
                     >
                       <RoundedStar active={isActive} animating={isAnimating} sizeClass="w-full h-full" />
@@ -227,7 +211,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, onSubmit, onCancel, isRemote
           onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
           disabled={currentStep === 0 && !name.trim()}
           className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all ${
-            (currentStep === totalSteps - 1) || (currentStep > 0 && currentStep <= RATING_CATEGORIES.length && ratings[RATING_CATEGORIES[currentStep-1].id as keyof DetailedRatings] > 0)
+            (currentStep === totalSteps - 1) || (currentStep > 0 && currentStep <= categories.length && (ratings[categories[currentStep-1].id] > 0))
             ? 'bg-white text-black' 
             : 'bg-white/5 text-white/10'
           }`}

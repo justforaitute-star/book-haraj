@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { KioskStep, Review, DetailedRatings } from './types.ts';
+import React, { useState, useEffect, useCallback } from 'react';
+import { KioskStep, Review, DetailedRatings, AppConfig, RatingCategory } from './types.ts';
 import HomeView from './components/HomeView.tsx';
 import CameraView from './components/CameraView.tsx';
 import FormView from './components/FormView.tsx';
@@ -31,6 +31,17 @@ const getEnv = (key: string): string => {
 const PHOTOPRISM_URL = getEnv('PHOTOPRISM_URL') || 'https://photoprism.example.com';
 const PHOTOPRISM_API_KEY = getEnv('PHOTOPRISM_API_KEY') || '';
 
+const DEFAULT_CATEGORIES: RatingCategory[] = [
+  { id: 'books', label: 'Book Availability', question: 'How was the selection?' },
+  { id: 'venue', label: 'Venue Arrangement', question: 'Layout of the venue?' },
+  { id: 'collection', label: 'Ease of Collection', question: 'Collection process?' },
+  { id: 'authors', label: 'Author Sessions', question: 'Enjoy the sessions?' },
+  { id: 'food', label: 'Food Stalls', question: 'Food & Refreshments?' },
+  { id: 'artibhition', label: 'Artibhition', question: 'The Artibhition program?' },
+  { id: 'coffee', label: 'Book a Coffee', question: 'Coffee experience?' },
+  { id: 'overall', label: 'Overall Experience', question: 'Your final verdict?' },
+];
+
 const App: React.FC = () => {
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -43,6 +54,26 @@ const App: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<string>('');
   
+  const [config, setConfig] = useState<AppConfig>({
+    logo_url: 'logo.png',
+    categories: DEFAULT_CATEGORIES
+  });
+
+  const fetchConfig = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+      if (!error && data) {
+        setConfig({
+          logo_url: data.logo_url || 'logo.png',
+          categories: data.categories || DEFAULT_CATEGORIES
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch config:", err);
+    }
+  }, []);
+
   const fetchReviews = useCallback(async () => {
     if (!supabase) return;
     try {
@@ -58,12 +89,15 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Set up polling to always have the latest reviews (every 10 seconds)
   useEffect(() => {
     fetchReviews();
-    const interval = setInterval(fetchReviews, 10000);
+    fetchConfig();
+    const interval = setInterval(() => {
+      fetchReviews();
+      fetchConfig();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [fetchReviews]);
+  }, [fetchReviews, fetchConfig]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -196,7 +230,7 @@ const App: React.FC = () => {
   }
 
   if (step === KioskStep.ADMIN) {
-    return <AdminPanel onBack={resetKiosk} reviews={reviews} onUpdate={fetchReviews} />;
+    return <AdminPanel config={config} onBack={resetKiosk} reviews={reviews} onUpdate={() => { fetchReviews(); fetchConfig(); }} />;
   }
 
   if (step === KioskStep.GALLERY && galleryFaceId) {
@@ -209,7 +243,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`h-full w-full relative overflow-hidden flex flex-col ${isRemoteMode ? 'bg-black text-white' : 'kiosk-bg text-white'}`}>
-      {!isRemoteMode && step === KioskStep.HOME && <header className="pt-16 pb-2 w-full flex flex-col items-center z-20 shrink-0"><Logo3 /></header>}
+      {!isRemoteMode && step === KioskStep.HOME && <header className="pt-16 pb-2 w-full flex flex-col items-center z-20 shrink-0"><Logo3 logoUrl={config.logo_url} /></header>}
       <main className="flex-1 w-full flex items-center justify-center relative z-10 overflow-hidden">
         {isSubmitting ? (
           <div className="flex flex-col items-center gap-6 animate-fade-in">
@@ -223,12 +257,11 @@ const App: React.FC = () => {
           <>
             {step === KioskStep.HOME && <HomeView onStart={() => setStep(KioskStep.CAMERA)} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
-            {step === KioskStep.FORM && <FormView photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
+            {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} />}
           </>
         )}
       </main>
-      {/* Footer removed per user request to hide branding */}
     </div>
   );
 };

@@ -8,15 +8,19 @@ export enum KioskStep {
   ADMIN = 'ADMIN'
 }
 
+export interface RatingCategory {
+  id: string;
+  label: string;
+  question: string;
+}
+
+export interface AppConfig {
+  logo_url: string;
+  categories: RatingCategory[];
+}
+
 export interface DetailedRatings {
-  books: number;
-  venue: number;
-  collection: number;
-  authors: number;
-  food: number;
-  artibhition: number;
-  coffee: number;
-  overall: number;
+  [key: string]: number;
 }
 
 export interface Review {
