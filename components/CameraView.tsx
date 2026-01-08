@@ -18,7 +18,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
 
     async function startCamera() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setError("Camera access is not supported or restricted.");
+        setError("Camera access is not supported on this browser.");
         return;
       }
 
@@ -37,7 +37,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
           videoRef.current.srcObject = mediaStream;
         }
       } catch (err) {
-        setError("Camera access denied. Please allow permissions.");
+        setError("Camera access denied. Please allow permissions in your settings.");
       }
     }
     startCamera();
@@ -98,27 +98,28 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
       ctx.scale(-1, 1);
       ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, outWidth, outHeight);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       onCapture(dataUrl);
     }
   };
 
   if (error) {
     return (
-      <div className="flex flex-col items-center bg-white p-12 rounded-[40px] shadow-2xl max-w-sm text-center">
-        <h3 className="text-xl font-bold mb-4 text-black">Permission Needed</h3>
-        <p className="text-slate-500 mb-8 text-sm">{error}</p>
-        <button onClick={() => window.location.reload()} className="px-10 py-4 bg-black text-white rounded-xl font-bold">Refresh</button>
+      <div className="flex flex-col items-center bg-black/50 backdrop-blur-3xl p-10 rounded-[40px] border border-white/10 shadow-2xl max-w-sm text-center mx-6 animate-fade-in">
+        <h3 className="text-xl font-black mb-4 text-white uppercase tracking-tighter">Permission Needed</h3>
+        <p className="text-slate-400 mb-8 text-sm">{error}</p>
+        <button onClick={() => window.location.reload()} className="w-full py-4 bg-white text-black rounded-xl font-black uppercase text-xs">Retry Access</button>
       </div>
     );
   }
 
   return (
-    <div className={`relative flex flex-col items-center w-full ${isRemote ? 'max-w-md h-full' : 'max-w-xl aspect-[9/16]'} bg-black overflow-hidden shadow-2xl border-[12px] border-white ${isRemote ? 'rounded-none' : 'rounded-[60px]'}`}>
+    <div className={`relative flex flex-col items-center w-full transition-all duration-700 ${isRemote ? 'h-screen w-screen max-w-none' : 'max-w-xl aspect-[9/16] rounded-[60px] border-[12px] border-white'} bg-black overflow-hidden shadow-2xl`}>
       
+      {/* Back Button */}
       <button 
         onClick={onCancel}
-        className="absolute top-8 left-8 z-[60] w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-white/40 transition-all shadow-xl"
+        className="absolute top-8 left-8 z-[60] w-12 h-12 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-all shadow-xl active:scale-90"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
@@ -134,33 +135,35 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
       />
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="absolute inset-0 flex flex-col items-center justify-between p-10 bg-gradient-to-b from-black/20 via-transparent to-black/40">
-        <div className="w-full text-center">
-          <h2 className="text-white text-3xl font-bold drop-shadow-2xl italic tracking-tight uppercase">Strike a Pose!</h2>
+      {/* Overlays */}
+      <div className="absolute inset-0 flex flex-col items-center justify-between p-10 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none">
+        <div className="w-full text-center mt-12">
+          <h2 className="text-white text-3xl md:text-4xl font-black drop-shadow-2xl italic tracking-tighter uppercase leading-none">Photo Ops</h2>
+          <p className="text-white/50 text-[10px] font-black uppercase tracking-[0.4em] mt-3">Personal Souvenir</p>
         </div>
 
         {countdown !== null && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[4px] z-50">
-            <span className="text-white text-[12rem] font-black drop-shadow-2xl animate-ping">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[6px] z-50">
+            <span className="text-white text-[12rem] md:text-[16rem] font-black drop-shadow-2xl animate-ping">
               {countdown === 0 ? "📸" : countdown}
             </span>
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-10 w-full mb-10">
+        <div className="flex flex-col items-center gap-10 w-full mb-10 pointer-events-auto">
           <button
             onClick={startPhotoSequence}
             className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-90 transition-all group border-[8px] border-white/20"
           >
-            <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center transition-colors">
+            <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.103-1.103A2 2 0 0011.188 3H8.812a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
               </svg>
             </div>
           </button>
           
-          <button onClick={onCancel} className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors">
-            Cancel & Return
+          <button onClick={onCancel} className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors">
+            Exit & Return
           </button>
         </div>
       </div>

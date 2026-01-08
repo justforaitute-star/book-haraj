@@ -9,18 +9,45 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Cross-browser Fullscreen Toggle with support for modern and legacy browsers
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+    const doc = document.documentElement as any;
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement && !(document as any).mozFullScreenElement && !(document as any).msFullscreenElement) {
+      if (doc.requestFullscreen) doc.requestFullscreen().catch(() => {});
+      else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+      else if (doc.mozRequestFullScreen) doc.mozRequestFullScreen();
+      else if (doc.msRequestFullscreen) doc.msRequestFullscreen();
+      setIsFullscreen(true);
     } else {
-      document.exitFullscreen();
+      const exit = document as any;
+      if (exit.exitFullscreen) exit.exitFullscreen().catch(() => {});
+      else if (exit.webkitExitFullscreen) exit.webkitExitFullscreen();
+      else if (exit.mozCancelFullScreen) exit.mozCancelFullScreen();
+      else if (exit.msExitFullscreen) exit.msExitFullscreen();
+      setIsFullscreen(false);
     }
   };
 
   useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const handleFsChange = () => {
+      setIsFullscreen(!!(
+        document.fullscreenElement || 
+        (document as any).webkitFullscreenElement || 
+        (document as any).mozFullScreenElement || 
+        (document as any).msFullscreenElement
+      ));
+    };
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    document.addEventListener('mozfullscreenchange', handleFsChange);
+    document.addEventListener('MSFullscreenChange', handleFsChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+      document.removeEventListener('mozfullscreenchange', handleFsChange);
+      document.removeEventListener('MSFullscreenChange', handleFsChange);
+    };
   }, []);
 
   const remoteUrl = useMemo(() => {
@@ -40,13 +67,16 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode }) => {
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
       
-      {/* Tiny Fullscreen Toggle */}
+      {/* Tiny Fullscreen Toggle - Fixed Z-Index and Interaction */}
       <button 
-        onClick={toggleFullscreen}
-        className="fixed top-8 right-8 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 z-[60]"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleFullscreen();
+        }}
+        className="fixed top-8 right-8 w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 z-[100] shadow-2xl active:scale-90"
         title="Toggle Fullscreen"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           {isFullscreen ? (
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
           ) : (
