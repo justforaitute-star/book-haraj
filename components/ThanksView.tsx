@@ -4,19 +4,18 @@ import React, { useMemo } from 'react';
 interface ThanksViewProps {
   onFinish: () => void;
   isRemote?: boolean;
-  reviewId?: string;
   faceId?: string;
 }
 
 const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, faceId }) => {
   const personalizedUrl = useMemo(() => {
-    const url = new URL(window.location.href);
+    const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('mode', 'gallery');
     if (faceId) url.searchParams.set('faceId', faceId);
     return url.toString();
   }, [faceId]);
 
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(personalizedUrl)}&bgcolor=ffffff&color=000000`;
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(personalizedUrl)}&bgcolor=ffffff&color=000000&margin=2`;
 
   return (
     <div className="text-center flex flex-col items-center px-6 animate-fade-in max-w-sm mx-auto">
@@ -31,18 +30,17 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
       </h2>
 
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-10 opacity-60">
-        Your digital souvenir is ready
+        Personal gallery generated
       </p>
 
       <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative">
-        <div className="relative p-4 bg-white rounded-3xl overflow-hidden">
-          <img src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-40 h-40' : 'w-56 h-56'}`} />
+        <div className="relative p-3 bg-white rounded-3xl overflow-hidden shadow-inner">
+          <img src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'}`} />
         </div>
         <div className="text-center">
-          <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-1">SCAN FOR MEMORIES</h4>
-          <p className="text-[9px] text-slate-500 font-medium uppercase italic">Groups all your expo photos</p>
+          <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-1">SCAN FOR HISTORY</h4>
+          <p className="text-[9px] text-slate-500 font-medium uppercase italic max-w-[180px] mx-auto">See all photos identified by your face signature</p>
         </div>
-        {/* Decorative corner accents */}
         <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white/20"></div>
         <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white/20"></div>
         <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white/20"></div>
@@ -56,7 +54,7 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
       <p className="mt-4 text-white/20 text-[8px] uppercase tracking-[0.6em] font-black">STATION RESETTING</p>
 
       {isRemote && (
-        <button onClick={onFinish} className="mt-10 px-10 py-5 bg-white text-black rounded-2xl font-black shadow-xl text-[10px] uppercase tracking-widest active:scale-95 transition-transform">
+        <button onClick={onFinish} className="mt-10 px-10 py-5 bg-white text-black rounded-2xl font-black shadow-xl text-[10px] uppercase tracking-widest active:scale-95">
           FINISH
         </button>
       )}
