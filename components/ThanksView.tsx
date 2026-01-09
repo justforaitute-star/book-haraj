@@ -5,9 +5,10 @@ interface ThanksViewProps {
   onFinish: () => void;
   isRemote?: boolean;
   faceId?: string;
+  faceIdEnabled?: boolean;
 }
 
-const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, faceId }) => {
+const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, faceId, faceIdEnabled = true }) => {
   const [qrTick, setQrTick] = useState(Date.now());
 
   // Update QR salt every 20 seconds
@@ -19,12 +20,12 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
   }, []);
 
   const personalizedUrl = useMemo(() => {
-    if (!faceId) return null;
+    if (!faceId || !faceIdEnabled) return null;
     const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('mode', 'gallery');
     url.searchParams.set('faceId', faceId);
     return url.toString();
-  }, [faceId]);
+  }, [faceId, faceIdEnabled]);
 
   const qrCodeImageUrl = useMemo(() => {
     if (!personalizedUrl) return null;
@@ -40,7 +41,7 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
   };
 
   return (
-    <div className="text-center flex flex-col items-center px-6 animate-fade-in max-w-sm mx-auto">
+    <div className="text-center flex flex-col items-center px-6 animate-fade-in max-w-sm mx-auto overflow-y-auto no-scrollbar py-10">
       <div className={`mb-8 ${isRemote ? 'w-16 h-16' : 'w-24 h-24'} bg-white rounded-[24px] flex items-center justify-center shadow-2xl animate-fade-in-up`}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-1/2 w-1/2 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
@@ -55,8 +56,8 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
         Thank you for your feedback
       </p>
 
-      {faceId && personalizedUrl && qrCodeImageUrl ? (
-        <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative w-full animate-fade-in">
+      {faceIdEnabled && faceId && personalizedUrl && qrCodeImageUrl ? (
+        <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative w-full animate-fade-in mb-8">
           <div className="relative p-3 bg-white rounded-3xl overflow-hidden shadow-inner">
             <img key={qrTick} src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'} animate-fade-in`} />
           </div>
@@ -85,23 +86,21 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
           <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-white/20"></div>
         </div>
       ) : (
-        <div className="p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl w-full">
+        <div className="p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl w-full mb-8">
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em]">Submission Complete</p>
-          <p className="text-[8px] text-slate-600 mt-2 uppercase tracking-widest font-bold">Face signature grouping is currently inactive.</p>
+          <p className="text-[8px] text-slate-600 mt-2 uppercase tracking-widest font-bold">Thank you for visiting Book Haraj!</p>
         </div>
       )}
 
-      <div className="mt-12 w-full h-1 bg-white/10 rounded-full overflow-hidden">
+      <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mb-4">
         <div className="h-full bg-white origin-left animate-loading-bar"></div>
       </div>
       
-      <p className="mt-4 text-white/20 text-[8px] uppercase tracking-[0.6em] font-black">STATION RESETTING</p>
+      <p className="text-white/20 text-[8px] uppercase tracking-[0.6em] font-black mb-8">STATION RESETTING</p>
 
-      {isRemote && (
-        <button onClick={onFinish} className="mt-10 px-10 py-5 bg-white text-black rounded-2xl font-black shadow-xl text-[10px] uppercase tracking-widest active:scale-95">
-          FINISH
-        </button>
-      )}
+      <button onClick={onFinish} className="w-full py-6 bg-white text-black rounded-2xl font-black shadow-xl text-[10px] uppercase tracking-widest active:scale-95 hover:scale-[1.02] transition-all">
+        {isRemote ? 'FINISH' : 'BACK TO HOME'}
+      </button>
     </div>
   );
 };
