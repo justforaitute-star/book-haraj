@@ -15,7 +15,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   const [search, setSearch] = useState('');
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
 
   // Local state for configuration editing
   const [localConfig, setLocalConfig] = useState<AppConfig>(config);
@@ -74,19 +75,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'bg') => {
     const file = e.target.files?.[0];
     if (!file || !supabase) return;
     setIsProcessing(true);
     try {
-      const fileName = `logo_${Date.now()}.${file.name.split('.').pop()}`;
+      const prefix = type === 'logo' ? 'logo' : 'bg';
+      const fileName = `${prefix}_${Date.now()}.${file.name.split('.').pop()}`;
       const { data, error } = await supabase.storage.from('photos').upload(fileName, file);
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
-      setLocalConfig(prev => ({ ...prev, logo_url: publicUrl }));
-      alert("Logo uploaded to storage. Click 'SAVE GLOBAL CONFIGURATION' below to apply.");
+      
+      setLocalConfig(prev => ({ 
+        ...prev, 
+        [type === 'logo' ? 'logo_url' : 'background_url']: publicUrl 
+      }));
+      
+      alert(`${type.toUpperCase()} uploaded to storage. Click 'SAVE GLOBAL CONFIGURATION' below to apply.`);
     } catch (err: any) {
-      alert(`Logo upload failed: ${err.message || 'Unknown error'}`);
+      alert(`${type.toUpperCase()} upload failed: ${err.message || 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -99,6 +106,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       const { error } = await supabase.from('settings').upsert({
         id: 1,
         logo_url: localConfig.logo_url,
+        background_url: localConfig.background_url,
         categories: localConfig.categories
       });
       
@@ -109,7 +117,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       const errorMessage = err?.message || err?.error_description || (typeof err === 'string' ? err : JSON.stringify(err));
       
       if (errorMessage.includes("404") || errorMessage.toLowerCase().includes("not found")) {
-        alert("CRITICAL ERROR: The 'settings' table is missing in Supabase.\n\nPlease create it via SQL Editor:\nCREATE TABLE settings (id int4 primary key, logo_url text, categories jsonb);");
+        alert("CRITICAL ERROR: The 'settings' table is missing in Supabase.\n\nPlease create it via SQL Editor:\nCREATE TABLE settings (id int4 primary key, logo_url text, background_url text, categories jsonb);");
       } else {
         alert(`Config save failed: ${errorMessage}`);
       }
@@ -126,7 +134,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   };
 
   return (
-    <div className="h-full w-full bg-black flex flex-col items-center p-8 animate-fade-in overflow-y-auto no-scrollbar">
+    <div className="h-full w-full bg-black flex flex-col items-center p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100]">
       <header className="w-full max-w-4xl flex items-center justify-between mb-8">
         <button onClick={onBack} className="flex items-center gap-3 text-slate-500 hover:text-white transition-colors">
           <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center">
@@ -222,10 +230,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
           </>
         ) : (
           <div className="space-y-10 animate-fade-in-up">
+            {/* Logo Configuration */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
               <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                Station Branding
+                Station Logo
               </h3>
               <div className="flex items-center gap-8">
                 <div className="w-24 h-24 bg-black rounded-2xl border border-white/10 flex items-center justify-center p-2 overflow-hidden">
@@ -235,16 +244,56 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <input 
                     type="file" 
                     accept="image/*" 
-                    onChange={handleLogoUpload} 
-                    ref={fileInputRef} 
+                    onChange={(e) => handleFileUpload(e, 'logo')} 
+                    ref={logoInputRef} 
                     className="hidden" 
                   />
                   <button 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => logoInputRef.current?.click()}
                     className="w-full py-4 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all"
                   >
-                    {localConfig.logo_url === 'logo.png' ? 'UPLOAD STATION LOGO' : 'REPLACE LOGO'}
+                    UPLOAD LOGO
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Background Configuration */}
+            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
+              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                Station Background
+              </h3>
+              <div className="flex items-center gap-8">
+                <div className="w-24 h-24 bg-black rounded-2xl border border-white/10 flex items-center justify-center p-2 overflow-hidden">
+                   {localConfig.background_url ? (
+                     <img src={localConfig.background_url} alt="BG Preview" className="max-w-full max-h-full object-cover" />
+                   ) : (
+                     <div className="text-[8px] text-slate-700 font-black uppercase tracking-widest">NONE</div>
+                   )}
+                </div>
+                <div className="flex-1">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => handleFileUpload(e, 'bg')} 
+                    ref={bgInputRef} 
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={() => bgInputRef.current?.click()}
+                    className="w-full py-4 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all"
+                  >
+                    UPLOAD BACKGROUND
+                  </button>
+                  {localConfig.background_url && (
+                    <button 
+                      onClick={() => setLocalConfig(prev => ({ ...prev, background_url: '' }))}
+                      className="w-full mt-2 py-2 text-[8px] text-red-500 font-black uppercase tracking-widest"
+                    >
+                      CLEAR BACKGROUND
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -297,7 +346,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       </div>
 
       <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl">
-        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.4</p>
+        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.5</p>
       </footer>
     </div>
   );

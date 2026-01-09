@@ -55,7 +55,8 @@ const App: React.FC = () => {
   const [submissionStatus, setSubmissionStatus] = useState<string>('');
   
   const [config, setConfig] = useState<AppConfig>({
-    logo_url: 'logo.png',
+    logo_url: '',
+    background_url: '',
     categories: DEFAULT_CATEGORIES
   });
 
@@ -65,17 +66,26 @@ const App: React.FC = () => {
       const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
       if (!error && data) {
         setConfig({
-          logo_url: data.logo_url || 'logo.png',
+          logo_url: data.logo_url || '',
+          background_url: data.background_url || '',
           categories: data.categories || DEFAULT_CATEGORIES
         });
       } else if (error) {
-        // Only log, don't break. 404 usually means table is missing.
-        console.warn("Settings fetch warning (table might be missing):", error.message);
+        console.warn("Settings fetch warning:", error.message);
       }
     } catch (err) {
       console.error("Failed to fetch config:", err);
     }
   }, []);
+
+  // Update background image on root
+  useEffect(() => {
+    if (config.background_url) {
+      document.documentElement.style.setProperty('--bg-image', `url(${config.background_url})`);
+    } else {
+      document.documentElement.style.setProperty('--bg-image', 'none');
+    }
+  }, [config.background_url]);
 
   const fetchReviews = useCallback(async () => {
     if (!supabase) return;
@@ -98,7 +108,7 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       fetchReviews();
       fetchConfig();
-    }, 15000); // Polling every 15s
+    }, 15000);
     return () => clearInterval(interval);
   }, [fetchReviews, fetchConfig]);
 
@@ -245,7 +255,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`h-full w-full relative overflow-hidden flex flex-col ${isRemoteMode ? 'bg-black text-white' : 'kiosk-bg text-white'}`}>
+    <div className={`h-full w-full relative overflow-hidden flex flex-col ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
       {!isRemoteMode && step === KioskStep.HOME && <header className="pt-16 pb-2 w-full flex flex-col items-center z-20 shrink-0"><Logo3 logoUrl={config.logo_url} /></header>}
       <main className="flex-1 w-full flex items-center justify-center relative z-10 overflow-hidden">
         {isSubmitting ? (

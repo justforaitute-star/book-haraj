@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,6 +13,7 @@
     :root {
       --brand-accent: #ffffff;
       --brand-ink: #000000;
+      --bg-image: none;
     }
     body {
       font-family: 'Outfit', 'Inter', system-ui, sans-serif;
@@ -25,6 +27,24 @@
     .kiosk-bg {
       background: radial-gradient(circle at 50% 50%, #111111 0%, #000000 100%);
     }
+    
+    .dynamic-bg {
+      position: fixed;
+      inset: 0;
+      background-image: var(--bg-image);
+      background-size: cover;
+      background-position: center;
+      z-index: -1;
+      transition: background-image 1s ease-in-out;
+    }
+
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%);
+      z-index: 0;
+    }
+
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -97,11 +117,13 @@
 </script>
 </head>
 <body class="kiosk-bg h-screen w-screen m-0 p-0 text-white relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+  <div class="dynamic-bg"></div>
+  <div class="bg-overlay"></div>
+  <div class="absolute inset-0 pointer-events-none overflow-hidden z-10">
      <div class="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-white opacity-[0.02] blur-[120px]"></div>
      <div class="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-white opacity-[0.02] blur-[120px]"></div>
   </div>
-  <div id="root" class="h-full w-full relative z-10"></div>
+  <div id="root" class="h-full w-full relative z-20"></div>
   <script type="module" src="./index.tsx"></script>
 </body>
 </html>

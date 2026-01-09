@@ -16,6 +16,7 @@ export interface RatingCategory {
 
 export interface AppConfig {
   logo_url: string;
+  background_url: string;
   categories: RatingCategory[];
 }
 
