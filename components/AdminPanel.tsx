@@ -21,7 +21,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
 
   const [localConfig, setLocalConfig] = useState<AppConfig>(config);
 
-  // Synchronize local background config to global CSS variables for preview
   useEffect(() => {
     if (activeTab === 'CONFIG' && localConfig.background_url) {
       const root = document.documentElement;
@@ -114,14 +113,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         logo_url: localConfig.logo_url,
         background_url: localConfig.background_url,
         background_config: localConfig.background_config,
-        categories: localConfig.categories
+        categories: localConfig.categories,
+        face_id_enabled: localConfig.face_id_enabled
       });
       
       if (error) throw error;
       alert("Global configuration applied successfully.");
       onUpdate();
     } catch (err: any) {
-      alert(`Config Save Failed: ${err.message}`);
+      const msg = err?.message || "";
+      if (msg.includes("background_config") && (msg.includes("column") || msg.includes("cache"))) {
+        alert("SCHEMA ERROR: Your 'settings' table is missing new columns.\n\nPlease run this SQL in Supabase SQL Editor:\n\nALTER TABLE settings ADD COLUMN background_config jsonb;\nALTER TABLE settings ADD COLUMN face_id_enabled boolean DEFAULT true;");
+      } else {
+        alert(`Config Save Failed: ${msg}`);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -141,6 +146,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         [field]: value
       }
     }));
+  };
+
+  const toggleFaceId = () => {
+    setLocalConfig(prev => ({ ...prev, face_id_enabled: !prev.face_id_enabled }));
   };
 
   const bgConfig = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
@@ -213,7 +222,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         ) : (
           <div className="space-y-12 animate-fade-in-up">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Logo */}
               <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
                 <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-8">STATION LOGO</h3>
                 <div className="w-32 h-32 bg-black rounded-3xl border border-white/10 flex items-center justify-center p-4 overflow-hidden mb-8 group relative">
@@ -227,7 +235,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                 <button onClick={() => logoInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
               </div>
 
-              {/* Background */}
               <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
                 <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-8">STATION BACKDROP</h3>
                 <div className="w-32 h-32 bg-black rounded-3xl border border-white/10 flex items-center justify-center p-4 overflow-hidden mb-8 group relative">
@@ -252,7 +259,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
               </div>
             </div>
 
-            {/* Placement Editor */}
+            {/* AI CONFIG TOGGLE */}
+            <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
+              <div>
+                <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Recognition Engine</h3>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Facial grouping for visitors</p>
+              </div>
+              <button 
+                onClick={toggleFaceId}
+                className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.face_id_enabled ? 'bg-white' : 'bg-white/10'}`}
+              >
+                <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.face_id_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
+              </button>
+            </div>
+
             {showPlacementEditor && localConfig.background_url && (
               <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl animate-fade-in-up space-y-10">
                 <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] flex items-center gap-4">
@@ -260,20 +280,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   Backdrop Tuning
                 </h3>
 
-                {/* LIVE PREVIEW MONITOR */}
                 <div className="relative w-full aspect-video bg-black rounded-3xl border-4 border-white/20 overflow-hidden shadow-2xl">
                    <div className="absolute inset-0 pointer-events-none z-10">
-                      {/* Simulated Interface Grid */}
                       <div className="absolute inset-x-0 bottom-4 flex justify-center">
                         <div className="w-1/2 h-4 bg-white/20 rounded-full blur-[2px]"></div>
                       </div>
                       <div className="absolute top-4 inset-x-0 flex justify-center">
                         <div className="w-1/3 h-6 border-2 border-white/10 rounded-lg blur-[1px]"></div>
                       </div>
-                      <div className="absolute inset-0 bg-radial-gradient(circle, transparent 0%, rgba(0,0,0,0.6) 100%)"></div>
                    </div>
                    
-                   {/* The Mirror Image */}
                    <img 
                       src={localConfig.background_url} 
                       alt="Preview Mirror"
@@ -344,12 +360,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                       className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
                     />
                   </div>
-                </div>
-
-                <div className="p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
-                  <p className="text-[9px] font-black text-yellow-500/80 uppercase tracking-widest leading-relaxed">
-                    Notice: Adjustments are mirrored to the monitor and the global station view in real-time. Changes are persistent only after clicking "Commit Global Config".
-                  </p>
                 </div>
               </div>
             )}

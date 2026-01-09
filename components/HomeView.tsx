@@ -71,29 +71,73 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
 
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
-      <div className="fixed top-8 right-8 flex gap-3 z-[100]">
-        <button 
-          onClick={handleRefresh}
-          className={`w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin text-white' : ''}`}
-          title="Refresh Data"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
+      {/* Consolidated Action Bar at Top Right */}
+      <div className="fixed top-8 right-8 flex flex-col items-end gap-3 z-[100]">
+        <div className="flex gap-3">
+          <button 
+            onClick={handleRefresh}
+            className={`w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin text-white' : ''}`}
+            title="Refresh Data"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
 
-        <button 
-          onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-          className="w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {isFullscreen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-            )}
-          </svg>
-        </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+            className="w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90"
+            title="Toggle Fullscreen"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {isFullscreen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              )}
+            </svg>
+          </button>
+
+          <button 
+            onClick={() => setShowSetup(!showSetup)}
+            className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all shadow-xl border border-white/10 active:scale-90 ${showSetup ? 'bg-white text-black rotate-90 scale-110' : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-white'}`}
+            title="Admin Menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Setup Panel positioned below the buttons */}
+        {showSetup && (
+          <div className="bg-slate-900/95 backdrop-blur-2xl p-6 rounded-[32px] shadow-2xl border border-white/10 mt-2 w-72 text-left animate-fade-in-up origin-top-right">
+            <h4 className="text-[11px] font-black text-white uppercase mb-4 tracking-widest flex items-center gap-2">
+              <div className="w-2 h-2 bg-white animate-pulse"></div>
+              Station Controls
+            </h4>
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={() => { onToggleMode(); setShowSetup(false); }} 
+                className="w-full py-4 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                Launch Feed
+              </button>
+              <button 
+                onClick={() => { onAdmin(); setShowSetup(false); }} 
+                className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 border border-white/10 active:scale-95 transition-all"
+              >
+                Admin Panel
+              </button>
+            </div>
+            <div className="mt-5 pt-5 border-t border-white/5">
+               <p className="text-[8px] text-slate-500 uppercase tracking-[0.3em] mb-2 font-black">Feed Endpoint:</p>
+               <div className="bg-black/50 p-3 rounded-xl text-[8px] break-all font-mono text-slate-400 select-all border border-white/5 leading-relaxed">
+                 {displayUrl}
+               </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col items-center w-full animate-fade-in-up">
@@ -134,33 +178,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="absolute bottom-8 right-8 flex flex-col items-end gap-3 z-50">
-        {showSetup && (
-          <div className="bg-slate-900/90 backdrop-blur-2xl p-6 rounded-[32px] shadow-2xl border border-white/10 mb-3 w-72 text-left animate-fade-in-up">
-            <h4 className="text-[11px] font-black text-white uppercase mb-3 tracking-widest flex items-center gap-2">
-              <div className="w-2 h-2 bg-white animate-pulse"></div>
-              Setup Panel
-            </h4>
-            <div className="flex flex-col gap-2">
-              <button onClick={onToggleMode} className="w-full py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Launch Feed</button>
-              <button onClick={onAdmin} className="w-full py-3 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 border border-white/10">Admin Panel</button>
-            </div>
-            <div className="mt-4 pt-4 border-t border-white/5">
-               <p className="text-[8px] text-slate-500 uppercase tracking-widest mb-2 font-black">Feed Link:</p>
-               <div className="bg-black p-2 rounded-lg text-[8px] break-all font-mono text-slate-600 select-all border border-white/5">{displayUrl}</div>
-            </div>
-          </div>
-        )}
-        <button 
-          onClick={() => setShowSetup(!showSetup)}
-          className={`w-14 h-14 rounded-[16px] flex items-center justify-center transition-all shadow-xl ${showSetup ? 'bg-white text-black rotate-90 scale-110' : 'bg-slate-900 text-white border border-white/10 hover:bg-slate-800'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
       </div>
     </div>
   );

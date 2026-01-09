@@ -19,20 +19,24 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
   }, []);
 
   const personalizedUrl = useMemo(() => {
+    if (!faceId) return null;
     const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('mode', 'gallery');
-    if (faceId) url.searchParams.set('faceId', faceId);
+    url.searchParams.set('faceId', faceId);
     return url.toString();
   }, [faceId]);
 
   const qrCodeImageUrl = useMemo(() => {
+    if (!personalizedUrl) return null;
     const dynamicUrl = `${personalizedUrl}${personalizedUrl.includes('?') ? '&' : '?'}salt=${qrTick}`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dynamicUrl)}&bgcolor=ffffff&color=000000&margin=2`;
   }, [personalizedUrl, qrTick]);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(personalizedUrl);
-    alert("Gallery link copied to clipboard!");
+    if (personalizedUrl) {
+      navigator.clipboard.writeText(personalizedUrl);
+      alert("Gallery link copied to clipboard!");
+    }
   };
 
   return (
@@ -48,38 +52,44 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
       </h2>
 
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-10 opacity-60">
-        Personal gallery generated
+        Thank you for your feedback
       </p>
 
-      <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative w-full">
-        <div className="relative p-3 bg-white rounded-3xl overflow-hidden shadow-inner">
-          <img key={qrTick} src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'} animate-fade-in`} />
-        </div>
-        
-        <div className="text-center w-full">
-          <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-2">SCAN FOR HISTORY</h4>
+      {faceId && personalizedUrl && qrCodeImageUrl ? (
+        <div className="flex flex-col items-center gap-6 p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl relative w-full animate-fade-in">
+          <div className="relative p-3 bg-white rounded-3xl overflow-hidden shadow-inner">
+            <img key={qrTick} src={qrCodeImageUrl} alt="Personal Gallery" className={`${isRemote ? 'w-44 h-44' : 'w-60 h-60'} animate-fade-in`} />
+          </div>
           
-          {/* Displaying the URL under the QR code */}
-          <div className="mt-2 group relative">
-            <div 
-              onClick={copyToClipboard}
-              className="bg-black/40 border border-white/10 rounded-xl p-3 cursor-pointer hover:bg-black/60 transition-all active:scale-95"
-            >
-              <p className="text-[8px] text-slate-400 font-mono break-all line-clamp-2 uppercase tracking-tight">
-                {personalizedUrl}
-              </p>
+          <div className="text-center w-full">
+            <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-2">SCAN FOR HISTORY</h4>
+            
+            <div className="mt-2 group relative">
+              <div 
+                onClick={copyToClipboard}
+                className="bg-black/40 border border-white/10 rounded-xl p-3 cursor-pointer hover:bg-black/60 transition-all active:scale-95"
+              >
+                <p className="text-[8px] text-slate-400 font-mono break-all line-clamp-2 uppercase tracking-tight">
+                  {personalizedUrl}
+                </p>
+              </div>
+              <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.2em] mt-2 group-hover:text-white/40 transition-colors">Tap link to copy</p>
             </div>
-            <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.2em] mt-2 group-hover:text-white/40 transition-colors">Tap link to copy</p>
+
+            <p className="text-[9px] text-slate-500 font-medium uppercase italic max-w-[180px] mx-auto mt-4">See all photos identified by your face signature</p>
           </div>
 
-          <p className="text-[9px] text-slate-500 font-medium uppercase italic max-w-[180px] mx-auto mt-4">See all photos identified by your face signature</p>
+          <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white/20"></div>
+          <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white/20"></div>
+          <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white/20"></div>
+          <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-white/20"></div>
         </div>
-
-        <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white/20"></div>
-        <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white/20"></div>
-        <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white/20"></div>
-        <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-white/20"></div>
-      </div>
+      ) : (
+        <div className="p-8 bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl w-full">
+          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em]">Submission Complete</p>
+          <p className="text-[8px] text-slate-600 mt-2 uppercase tracking-widest font-bold">Face signature grouping is currently inactive.</p>
+        </div>
+      )}
 
       <div className="mt-12 w-full h-1 bg-white/10 rounded-full overflow-hidden">
         <div className="h-full bg-white origin-left animate-loading-bar"></div>

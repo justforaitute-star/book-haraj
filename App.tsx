@@ -58,7 +58,8 @@ const App: React.FC = () => {
     logo_url: '',
     background_url: '',
     background_config: { zoom: 1, x: 0, y: 0, blur: 0 },
-    categories: DEFAULT_CATEGORIES
+    categories: DEFAULT_CATEGORIES,
+    face_id_enabled: true
   });
 
   const fetchConfig = useCallback(async () => {
@@ -70,7 +71,8 @@ const App: React.FC = () => {
           logo_url: data.logo_url || '',
           background_url: data.background_url || '',
           background_config: data.background_config || { zoom: 1, x: 0, y: 0, blur: 0 },
-          categories: data.categories || DEFAULT_CATEGORIES
+          categories: data.categories || DEFAULT_CATEGORIES,
+          face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true
         });
       }
     } catch (err) {
@@ -213,18 +215,22 @@ const App: React.FC = () => {
     setSubmissionStatus('Initializing...');
     try {
       const rawPhoto = currentReview.photo || '';
+      
+      // Conditionally run face ID
       const [faceId, photoUrl] = await Promise.all([
-        identifyFaceWithPhotoPrism(rawPhoto),
+        config.face_id_enabled ? identifyFaceWithPhotoPrism(rawPhoto) : Promise.resolve(''),
         uploadToSupabase(rawPhoto)
       ]);
+
       const newReview = {
         name: details.name,
         photo: photoUrl,
-        face_id: faceId,
+        face_id: faceId || null,
         ratings: details.ratings,
         comment: details.comment,
         timestamp: Date.now()
       };
+      
       setSubmissionStatus('Publishing...');
       const { data, error } = await supabase.from('reviews').insert([newReview]).select();
       if (error) {

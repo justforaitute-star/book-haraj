@@ -26,6 +26,7 @@ export interface AppConfig {
   background_url: string;
   background_config?: BackgroundConfig;
   categories: RatingCategory[];
+  face_id_enabled?: boolean;
 }
 
 export interface DetailedRatings {
