@@ -57,18 +57,19 @@ const App: React.FC = () => {
   const [config, setConfig] = useState<AppConfig>({
     logo_url: '',
     background_url: '',
+    background_config: { zoom: 1, x: 0, y: 0, blur: 0 },
     categories: DEFAULT_CATEGORIES
   });
 
   const fetchConfig = useCallback(async () => {
     if (!supabase) return;
     try {
-      // Use maybeSingle to prevent error logging on 404
       const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
       if (!error && data) {
         setConfig({
           logo_url: data.logo_url || '',
           background_url: data.background_url || '',
+          background_config: data.background_config || { zoom: 1, x: 0, y: 0, blur: 0 },
           categories: data.categories || DEFAULT_CATEGORIES
         });
       }
@@ -77,15 +78,22 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Update background image dynamically on the root document
+  // Update background styling dynamically
   useEffect(() => {
     const root = document.documentElement;
+    const bg = config.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
+    
     if (config.background_url) {
       root.style.setProperty('--bg-image', `url(${config.background_url})`);
+      // Use CSS variables to control the transform
+      root.style.setProperty('--bg-zoom', `${bg.zoom}`);
+      root.style.setProperty('--bg-x', `${bg.x}%`);
+      root.style.setProperty('--bg-y', `${bg.y}%`);
+      root.style.setProperty('--bg-blur', `${bg.blur}px`);
     } else {
       root.style.setProperty('--bg-image', 'none');
     }
-  }, [config.background_url]);
+  }, [config.background_url, config.background_config]);
 
   const fetchReviews = useCallback(async () => {
     if (!supabase) return;

@@ -14,9 +14,17 @@ export interface RatingCategory {
   question: string;
 }
 
+export interface BackgroundConfig {
+  zoom: number;
+  x: number;
+  y: number;
+  blur: number;
+}
+
 export interface AppConfig {
   logo_url: string;
   background_url: string;
+  background_config?: BackgroundConfig;
   categories: RatingCategory[];
 }
 

@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useRef } from 'react';
-import { Review, DetailedRatings, AppConfig, RatingCategory } from '../types.ts';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Review, DetailedRatings, AppConfig, RatingCategory, BackgroundConfig } from '../types.ts';
 import { supabase } from '../lib/supabase.ts';
 
 interface AdminPanelProps {
@@ -15,10 +15,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   const [search, setSearch] = useState('');
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPlacementEditor, setShowPlacementEditor] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
   const [localConfig, setLocalConfig] = useState<AppConfig>(config);
+
+  // Synchronize local background config to global CSS variables for preview
+  useEffect(() => {
+    if (activeTab === 'CONFIG' && localConfig.background_url) {
+      const root = document.documentElement;
+      const bg = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
+      root.style.setProperty('--bg-image', `url(${localConfig.background_url})`);
+      root.style.setProperty('--bg-zoom', `${bg.zoom}`);
+      root.style.setProperty('--bg-x', `${bg.x}%`);
+      root.style.setProperty('--bg-y', `${bg.y}%`);
+      root.style.setProperty('--bg-blur', `${bg.blur}px`);
+    }
+  }, [localConfig.background_config, localConfig.background_url, activeTab]);
 
   const foundReview = useMemo(() => {
     if (!search.trim()) return null;
@@ -83,9 +97,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         [type === 'logo' ? 'logo_url' : 'background_url']: publicUrl 
       }));
       
-      alert(`${type.toUpperCase()} uploaded successfully. Please click 'COMMIT GLOBAL CONFIG' below to save these changes permanently.`);
+      alert(`${type.toUpperCase()} uploaded successfully. Please click 'COMMIT GLOBAL CONFIG' below to save.`);
     } catch (err: any) {
-      alert(`${type.toUpperCase()} upload failed: ${err.message}. Ensure the 'photos' bucket exists in Supabase Storage.`);
+      alert(`${type.toUpperCase()} upload failed: ${err.message}.`);
     } finally {
       setIsProcessing(false);
     }
@@ -99,6 +113,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         id: 1,
         logo_url: localConfig.logo_url,
         background_url: localConfig.background_url,
+        background_config: localConfig.background_config,
         categories: localConfig.categories
       });
       
@@ -106,14 +121,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       alert("Global configuration applied successfully.");
       onUpdate();
     } catch (err: any) {
-      const msg = err?.message || JSON.stringify(err);
-      if (msg.includes("404") || msg.toLowerCase().includes("not found")) {
-        alert("CRITICAL ERROR: The 'settings' table is missing in Supabase.\n\nGo to Supabase -> SQL Editor and run the CREATE TABLE script provided in the instructions.");
-      } else if (msg.includes("42501") || msg.toLowerCase().includes("permission denied")) {
-        alert("PERMISSION ERROR: Your Supabase user doesn't have permission to write to 'settings'. Ensure Row Level Security (RLS) is either disabled or configured for public inserts.");
-      } else {
-        alert(`Config Save Failed: ${msg}`);
-      }
+      alert(`Config Save Failed: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -125,9 +133,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     setLocalConfig(prev => ({ ...prev, categories: newCategories }));
   };
 
+  const updateBgConfig = (field: keyof BackgroundConfig, value: number) => {
+    setLocalConfig(prev => ({
+      ...prev,
+      background_config: {
+        ...(prev.background_config || { zoom: 1, x: 0, y: 0, blur: 0 }),
+        [field]: value
+      }
+    }));
+  };
+
   return (
     <div className="h-full w-full bg-black flex flex-col items-center p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100]">
-      <header className="w-full max-w-4xl flex items-center justify-between mb-12">
+      <header className="w-full max-w-4xl flex items-center justify-between mb-12 shrink-0">
         <button onClick={onBack} className="flex items-center gap-3 text-slate-500 hover:text-white transition-all">
           <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -143,7 +161,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         <div className="w-24"></div>
       </header>
 
-      <div className="flex bg-white/5 p-2 rounded-[24px] mb-12 border border-white/10 w-full max-w-md shadow-2xl">
+      <div className="flex bg-white/5 p-2 rounded-[24px] mb-12 border border-white/10 w-full max-w-md shadow-2xl shrink-0">
         <button 
           onClick={() => setActiveTab('REVIEWS')}
           className={`flex-1 py-4 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'REVIEWS' ? 'bg-white text-black shadow-xl' : 'text-slate-500'}`}
@@ -217,10 +235,91 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                      <div className="text-[10px] text-slate-700 font-black">NO ASSET</div>
                    )}
                 </div>
-                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bg')} ref={bgInputRef} className="hidden" />
-                <button onClick={() => bgInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
+                <div className="flex flex-col w-full gap-2">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bg')} ref={bgInputRef} className="hidden" />
+                  <button onClick={() => bgInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD NEW</button>
+                  {localConfig.background_url && (
+                    <button 
+                      onClick={() => setShowPlacementEditor(!showPlacementEditor)} 
+                      className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${showPlacementEditor ? 'bg-white text-black border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}
+                    >
+                      {showPlacementEditor ? 'CLOSE PLACEMENT' : 'EDIT PLACEMENT'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Placement Editor */}
+            {showPlacementEditor && localConfig.background_url && (
+              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl animate-fade-in-up space-y-10">
+                <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] flex items-center gap-4">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                  Backdrop Tuning
+                </h3>
+                
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digital Zoom</label>
+                       <span className="text-xs font-mono font-bold text-white">{(localConfig.background_config?.zoom || 1).toFixed(1)}x</span>
+                    </div>
+                    <input 
+                      type="range" min="1" max="5" step="0.1"
+                      value={localConfig.background_config?.zoom || 1}
+                      onChange={(e) => updateBgConfig('zoom', parseFloat(e.target.value))}
+                      className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Horizontal Offset</label>
+                         <span className="text-xs font-mono font-bold text-white">{localConfig.background_config?.x || 0}%</span>
+                      </div>
+                      <input 
+                        type="range" min="-100" max="100" step="1"
+                        value={localConfig.background_config?.x || 0}
+                        onChange={(e) => updateBgConfig('x', parseInt(e.target.value))}
+                        className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vertical Offset</label>
+                         <span className="text-xs font-mono font-bold text-white">{localConfig.background_config?.y || 0}%</span>
+                      </div>
+                      <input 
+                        type="range" min="-100" max="100" step="1"
+                        value={localConfig.background_config?.y || 0}
+                        onChange={(e) => updateBgConfig('y', parseInt(e.target.value))}
+                        className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Atmospheric Blur</label>
+                       <span className="text-xs font-mono font-bold text-white">{localConfig.background_config?.blur || 0}px</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" step="1"
+                      value={localConfig.background_config?.blur || 0}
+                      onChange={(e) => updateBgConfig('blur', parseInt(e.target.value))}
+                      className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
+                  <p className="text-[9px] font-black text-yellow-500/80 uppercase tracking-widest leading-relaxed">
+                    Notice: Adjustments are applied in real-time to the current station view. Changes will only be permanent after clicking "Commit Global Config".
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl">
               <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] mb-10 flex items-center gap-4">
@@ -261,7 +360,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
             <button 
               onClick={handleSaveConfig}
               disabled={isProcessing}
-              className="w-full py-8 bg-white text-black rounded-[32px] font-black text-sm uppercase tracking-[0.6em] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15)] hover:scale-[1.02] active:scale-95 transition-all"
+              className="w-full py-8 bg-white text-black rounded-[32px] font-black text-sm uppercase tracking-[0.6em] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15)] hover:scale-[1.02] active:scale-95 transition-all shrink-0"
             >
               {isProcessing ? 'SYNCHRONIZING...' : 'COMMIT GLOBAL CONFIG'}
             </button>
@@ -269,8 +368,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         )}
       </div>
 
-      <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl opacity-20">
-        <p className="text-[10px] font-black text-white uppercase tracking-[1.5em]">HARAJ MANAGEMENT V4.0</p>
+      <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl opacity-20 shrink-0">
+        <p className="text-[10px] font-black text-white uppercase tracking-[1.5em]">HARAJ MANAGEMENT V4.1</p>
       </footer>
     </div>
   );

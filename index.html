@@ -14,6 +14,10 @@
       --brand-accent: #ffffff;
       --brand-ink: #000000;
       --bg-image: none;
+      --bg-zoom: 1;
+      --bg-x: 0%;
+      --bg-y: 0%;
+      --bg-blur: 0px;
     }
     body {
       font-family: 'Outfit', 'Inter', system-ui, sans-serif;
@@ -35,7 +39,9 @@
       background-size: cover;
       background-position: center;
       z-index: -1;
-      transition: background-image 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-image 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease-out, filter 0.3s ease-out;
+      transform: scale(var(--bg-zoom)) translate(var(--bg-x), var(--bg-y));
+      filter: blur(var(--bg-blur));
     }
 
     .bg-overlay {
