@@ -6,9 +6,10 @@ interface HomeViewProps {
   onToggleMode: () => void;
   onAdmin: () => void;
   onRefresh?: () => void;
+  faceIdEnabled?: boolean;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onRefresh }) => {
+const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onRefresh, faceIdEnabled = true }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [qrTick, setQrTick] = useState(Date.now());
@@ -159,22 +160,26 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
             </span>
           </button>
 
-          <div className="flex items-center gap-6 w-full max-w-xs animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            <div className="h-px flex-1 bg-slate-800/50"></div>
-            <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">OR</span>
-            <div className="h-px flex-1 bg-slate-800/50"></div>
-          </div>
+          {faceIdEnabled && (
+            <>
+              <div className="flex items-center gap-6 w-full max-w-xs animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                <div className="h-px flex-1 bg-slate-800/50"></div>
+                <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">OR</span>
+                <div className="h-px flex-1 bg-slate-800/50"></div>
+              </div>
 
-          <div className="group bg-white/5 backdrop-blur-md p-6 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-8 w-full max-w-md transition-all hover:border-white/40 hover:bg-white/10 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-            <div className="p-4 bg-white rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-500 relative">
-              <img key={qrTick} src={qrCodeUrl} alt="Scan to Review" className="w-20 h-20 mix-blend-multiply opacity-90 animate-fade-in" />
-              <div className="absolute -inset-1 border-2 border-white/20 rounded-2xl animate-pulse"></div>
-            </div>
-            <div className="text-left">
-              <h3 className="text-white font-black text-sm mb-1 uppercase tracking-widest group-hover:text-white transition-colors">SKIP THE CROWD</h3>
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-[120px]">Scan to review from your phone</p>
-            </div>
-          </div>
+              <div className="group bg-white/5 backdrop-blur-md p-6 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-8 w-full max-w-md transition-all hover:border-white/40 hover:bg-white/10 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+                <div className="p-4 bg-white rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-500 relative">
+                  <img key={qrTick} src={qrCodeUrl} alt="Scan to Review" className="w-20 h-20 mix-blend-multiply opacity-90 animate-fade-in" />
+                  <div className="absolute -inset-1 border-2 border-white/20 rounded-2xl animate-pulse"></div>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-white font-black text-sm mb-1 uppercase tracking-widest group-hover:text-white transition-colors">SKIP THE CROWD</h3>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-[120px]">Scan to review from your phone</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
