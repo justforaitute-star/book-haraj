@@ -99,7 +99,7 @@ const ThanksView: React.FC<ThanksViewProps> = ({ onFinish, isRemote = false, fac
       <p className="text-white/20 text-[8px] uppercase tracking-[0.6em] font-black mb-8">STATION RESETTING</p>
 
       <button onClick={onFinish} className="w-full py-6 bg-white text-black rounded-2xl font-black shadow-xl text-[10px] uppercase tracking-widest active:scale-95 hover:scale-[1.02] transition-all">
-        {isRemote ? 'FINISH' : 'BACK TO HOME'}
+        BACK TO HOME
       </button>
     </div>
   );

@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [galleryFaceId, setGalleryFaceId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<string>('');
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   
   const [config, setConfig] = useState<AppConfig>({
     logo_url: '',
@@ -75,6 +76,7 @@ const App: React.FC = () => {
           face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true
         });
       }
+      setIsConfigLoaded(true);
     } catch (err) {
       console.error("Configuration sync error:", err);
     }
@@ -140,13 +142,26 @@ const App: React.FC = () => {
         }
       } else if (mode === 'remote') {
         setIsRemoteMode(true);
-        // If Face ID is off, remote mode users also go straight to form
-        setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM);
+        // Only set the step once the config is loaded to avoid jumping into the camera accidentally
+        if (isConfigLoaded) {
+          setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM);
+        }
       }
     } else if (mode === 'display') {
       setIsDisplayMode(true);
     }
-  }, [config.face_id_enabled]);
+  }, [isConfigLoaded, config.face_id_enabled]);
+
+  const handleStartReview = () => {
+    // Force evaluation of current config
+    if (config.face_id_enabled) {
+      setStep(KioskStep.CAMERA);
+    } else {
+      // Clear any stale photo data just in case
+      setCurrentReview(prev => ({ ...prev, photo: undefined }));
+      setStep(KioskStep.FORM);
+    }
+  };
 
   const identifyFaceWithPhotoPrism = async (base64Photo: string): Promise<string> => {
     if (!PHOTOPRISM_API_KEY || !base64Photo) return 'GUEST_ID';
@@ -293,7 +308,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && <HomeView onStart={() => setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM)} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
+            {step === KioskStep.HOME && <HomeView onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} faceIdEnabled={config.face_id_enabled} />}
