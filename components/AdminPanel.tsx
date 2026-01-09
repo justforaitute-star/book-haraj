@@ -18,7 +18,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
-  // Local state for configuration editing
   const [localConfig, setLocalConfig] = useState<AppConfig>(config);
 
   const foundReview = useMemo(() => {
@@ -43,33 +42,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         .eq('id', editingReview.id);
 
       if (error) throw error;
-      alert("Review updated successfully!");
+      alert("Review updated.");
       onUpdate();
       setEditingReview(null);
-      setSearch('');
     } catch (err: any) {
-      alert(`Update failed: ${err.message || 'Unknown error'}`);
+      alert(`Update error: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!supabase || !confirm("PERMANENTLY DELETE THIS REVIEW? This cannot be undone.")) return;
+    if (!supabase || !confirm("Permanently delete this review?")) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from('reviews')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('reviews').delete().eq('id', id);
       if (error) throw error;
-      alert("Review permanently removed.");
+      alert("Review removed.");
       onUpdate();
       setSearch('');
-      setEditingReview(null);
     } catch (err: any) {
-      alert(`Deletion failed: ${err.message || 'Unknown error'}`);
+      alert(`Deletion error: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -80,9 +73,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     if (!file || !supabase) return;
     setIsProcessing(true);
     try {
-      const prefix = type === 'logo' ? 'logo' : 'bg';
-      const fileName = `${prefix}_${Date.now()}.${file.name.split('.').pop()}`;
-      const { data, error } = await supabase.storage.from('photos').upload(fileName, file);
+      const fileName = `${type}_${Date.now()}.${file.name.split('.').pop()}`;
+      const { error } = await supabase.storage.from('photos').upload(fileName, file);
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
       
@@ -91,9 +83,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         [type === 'logo' ? 'logo_url' : 'background_url']: publicUrl 
       }));
       
-      alert(`${type.toUpperCase()} uploaded to storage. Click 'SAVE GLOBAL CONFIGURATION' below to apply.`);
+      alert(`${type.toUpperCase()} uploaded successfully. Please click 'COMMIT GLOBAL CONFIG' below to save these changes permanently.`);
     } catch (err: any) {
-      alert(`${type.toUpperCase()} upload failed: ${err.message || 'Unknown error'}`);
+      alert(`${type.toUpperCase()} upload failed: ${err.message}. Ensure the 'photos' bucket exists in Supabase Storage.`);
     } finally {
       setIsProcessing(false);
     }
@@ -111,17 +103,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       });
       
       if (error) throw error;
-      alert("Configuration saved successfully!");
+      alert("Global configuration applied successfully.");
       onUpdate();
     } catch (err: any) {
-      const errorMessage = err?.message || err?.error_description || (typeof err === 'string' ? err : JSON.stringify(err));
-      
-      if (errorMessage.includes("404") || errorMessage.toLowerCase().includes("not found")) {
-        alert("CRITICAL ERROR: The 'settings' table is missing in Supabase.\n\nPlease create it via SQL Editor:\nCREATE TABLE settings (id int4 primary key, logo_url text, background_url text, categories jsonb);");
+      const msg = err?.message || JSON.stringify(err);
+      if (msg.includes("404") || msg.toLowerCase().includes("not found")) {
+        alert("CRITICAL ERROR: The 'settings' table is missing in Supabase.\n\nGo to Supabase -> SQL Editor and run the CREATE TABLE script provided in the instructions.");
+      } else if (msg.includes("42501") || msg.toLowerCase().includes("permission denied")) {
+        alert("PERMISSION ERROR: Your Supabase user doesn't have permission to write to 'settings'. Ensure Row Level Security (RLS) is either disabled or configured for public inserts.");
       } else {
-        alert(`Config save failed: ${errorMessage}`);
+        alert(`Config Save Failed: ${msg}`);
       }
-      console.error("Supabase Save Error Details:", err);
     } finally {
       setIsProcessing(false);
     }
@@ -135,197 +127,129 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
 
   return (
     <div className="h-full w-full bg-black flex flex-col items-center p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100]">
-      <header className="w-full max-w-4xl flex items-center justify-between mb-8">
-        <button onClick={onBack} className="flex items-center gap-3 text-slate-500 hover:text-white transition-colors">
-          <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center">
+      <header className="w-full max-w-4xl flex items-center justify-between mb-12">
+        <button onClick={onBack} className="flex items-center gap-3 text-slate-500 hover:text-white transition-all">
+          <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest">EXIT PANEL</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">STATION EXIT</span>
         </button>
         <div className="text-center">
-          <h2 className="text-3xl font-black italic tracking-tighter uppercase">Admin Panel</h2>
-          <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mt-1">Management Interface</p>
+          <h2 className="text-4xl font-black italic tracking-tighter uppercase">ADMIN PANEL</h2>
+          <p className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em] mt-1">Management Engine</p>
         </div>
-        <div className="w-20"></div>
+        <div className="w-24"></div>
       </header>
 
-      <div className="flex bg-white/5 p-1.5 rounded-2xl mb-12 border border-white/10 w-full max-w-sm">
+      <div className="flex bg-white/5 p-2 rounded-[24px] mb-12 border border-white/10 w-full max-w-md shadow-2xl">
         <button 
           onClick={() => setActiveTab('REVIEWS')}
-          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'REVIEWS' ? 'bg-white text-black shadow-lg' : 'text-slate-500'}`}
+          className={`flex-1 py-4 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'REVIEWS' ? 'bg-white text-black shadow-xl' : 'text-slate-500'}`}
         >
           REVIEWS
         </button>
         <button 
           onClick={() => setActiveTab('CONFIG')}
-          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'CONFIG' ? 'bg-white text-black shadow-lg' : 'text-slate-500'}`}
+          className={`flex-1 py-4 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'CONFIG' ? 'bg-white text-black shadow-xl' : 'text-slate-500'}`}
         >
-          STATION SETTINGS
+          STATION
         </button>
       </div>
 
-      <div className="w-full max-w-2xl space-y-8 pb-32">
+      <div className="w-full max-w-2xl space-y-10 pb-40">
         {activeTab === 'REVIEWS' ? (
           <>
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
-              <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-4">Search Review</h3>
+            <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl">
+              <h3 className="text-[11px] font-black text-white/30 uppercase tracking-[0.5em] mb-6">Search Station Registry</h3>
               <input 
                 type="text" 
                 placeholder="TYPE SERIAL OR UUID" 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-black/40 border-b border-white/10 py-4 text-center text-xl font-black uppercase tracking-[0.2em] focus:border-white transition-colors outline-none text-white rounded-xl"
+                className="w-full bg-black/40 border-b border-white/10 py-6 text-center text-2xl font-black uppercase tracking-[0.3em] focus:border-white transition-all outline-none text-white rounded-2xl"
               />
             </div>
 
             {foundReview && !editingReview && (
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 animate-fade-in-up">
-                <div className="flex items-start gap-8">
-                  <img src={foundReview.photo} className="w-32 h-40 object-cover rounded-2xl border border-white/10 shadow-xl" />
-                  <div className="flex-1">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">SERIAL #{foundReview.serial_number}</p>
-                    <h4 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">{foundReview.name}</h4>
-                    <p className="text-white/60 text-sm leading-relaxed italic mb-8">"{foundReview.comment}"</p>
+              <div className="bg-white/5 border border-white/10 rounded-[48px] p-12 animate-fade-in-up">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
+                  <img src={foundReview.photo} className="w-48 h-60 object-cover rounded-3xl border border-white/10 shadow-2xl" />
+                  <div className="flex-1 text-center md:text-left">
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">SERIAL {foundReview.serial_number}</p>
+                    <h4 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">{foundReview.name}</h4>
+                    <p className="text-white/60 text-lg leading-relaxed italic mb-10">"{foundReview.comment}"</p>
                     
                     <div className="flex gap-4">
-                      <button onClick={() => handleEdit(foundReview)} className="flex-1 py-4 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-xl hover:scale-105 transition-all">EDIT</button>
-                      <button onClick={() => handleDelete(foundReview.id)} className="flex-1 py-4 bg-red-600/10 text-red-500 border border-red-500/20 font-black text-[10px] uppercase tracking-widest rounded-xl">DELETE</button>
+                      <button onClick={() => handleEdit(foundReview)} className="flex-1 py-5 bg-white text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-all shadow-xl">EDIT</button>
+                      <button onClick={() => handleDelete(foundReview.id)} className="flex-1 py-5 bg-red-600/10 text-red-500 border border-red-500/20 font-black text-xs uppercase tracking-widest rounded-2xl">REMOVE</button>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
-            {editingReview && (
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 animate-fade-in-up space-y-6">
-                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Edit Review Content</h3>
-                <div className="space-y-4">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Visitor Name</label>
-                  <input 
-                    type="text" 
-                    value={editingReview.name} 
-                    onChange={(e) => setEditingReview({...editingReview, name: e.target.value})}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white font-bold outline-none focus:border-white"
-                  />
-                </div>
-                <div className="space-y-4">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Comment</label>
-                  <textarea 
-                    rows={4}
-                    value={editingReview.comment} 
-                    onChange={(e) => setEditingReview({...editingReview, comment: e.target.value})}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white font-medium outline-none focus:border-white resize-none"
-                  />
-                </div>
-                <div className="flex gap-4 pt-4">
-                  <button onClick={() => setEditingReview(null)} className="flex-1 py-5 bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest rounded-2xl border border-white/10">CANCEL</button>
-                  <button onClick={handleUpdateReview} disabled={isProcessing} className="flex-1 py-5 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-2xl">
-                    {isProcessing ? 'SAVING...' : 'SAVE CHANGES'}
-                  </button>
-                </div>
-              </div>
-            )}
           </>
         ) : (
-          <div className="space-y-10 animate-fade-in-up">
-            {/* Logo Configuration */}
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
-              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                Station Logo
-              </h3>
-              <div className="flex items-center gap-8">
-                <div className="w-24 h-24 bg-black rounded-2xl border border-white/10 flex items-center justify-center p-2 overflow-hidden">
-                   <img src={localConfig.logo_url} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
-                </div>
-                <div className="flex-1">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => handleFileUpload(e, 'logo')} 
-                    ref={logoInputRef} 
-                    className="hidden" 
-                  />
-                  <button 
-                    onClick={() => logoInputRef.current?.click()}
-                    className="w-full py-4 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all"
-                  >
-                    UPLOAD LOGO
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Background Configuration */}
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
-              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                Station Background
-              </h3>
-              <div className="flex items-center gap-8">
-                <div className="w-24 h-24 bg-black rounded-2xl border border-white/10 flex items-center justify-center p-2 overflow-hidden">
-                   {localConfig.background_url ? (
-                     <img src={localConfig.background_url} alt="BG Preview" className="max-w-full max-h-full object-cover" />
+          <div className="space-y-12 animate-fade-in-up">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Logo */}
+              <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
+                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-8">STATION LOGO</h3>
+                <div className="w-32 h-32 bg-black rounded-3xl border border-white/10 flex items-center justify-center p-4 overflow-hidden mb-8 group relative">
+                   {localConfig.logo_url ? (
+                     <img src={localConfig.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
                    ) : (
-                     <div className="text-[8px] text-slate-700 font-black uppercase tracking-widest">NONE</div>
+                     <div className="text-[10px] text-slate-700 font-black">NO ASSET</div>
                    )}
                 </div>
-                <div className="flex-1">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => handleFileUpload(e, 'bg')} 
-                    ref={bgInputRef} 
-                    className="hidden" 
-                  />
-                  <button 
-                    onClick={() => bgInputRef.current?.click()}
-                    className="w-full py-4 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all"
-                  >
-                    UPLOAD BACKGROUND
-                  </button>
-                  {localConfig.background_url && (
-                    <button 
-                      onClick={() => setLocalConfig(prev => ({ ...prev, background_url: '' }))}
-                      className="w-full mt-2 py-2 text-[8px] text-red-500 font-black uppercase tracking-widest"
-                    >
-                      CLEAR BACKGROUND
-                    </button>
-                  )}
+                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} ref={logoInputRef} className="hidden" />
+                <button onClick={() => logoInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
+              </div>
+
+              {/* Background */}
+              <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
+                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-8">STATION BACKDROP</h3>
+                <div className="w-32 h-32 bg-black rounded-3xl border border-white/10 flex items-center justify-center p-4 overflow-hidden mb-8 group relative">
+                   {localConfig.background_url ? (
+                     <img src={localConfig.background_url} alt="BG" className="max-w-full max-h-full object-cover rounded-lg" />
+                   ) : (
+                     <div className="text-[10px] text-slate-700 font-black">NO ASSET</div>
+                   )}
                 </div>
+                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bg')} ref={bgInputRef} className="hidden" />
+                <button onClick={() => bgInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
               </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 backdrop-blur-3xl shadow-2xl">
-              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                Review Questions
+            <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl">
+              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] mb-10 flex items-center gap-4">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                Review Configuration
               </h3>
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {localConfig.categories.map((cat, idx) => (
-                  <div key={cat.id} className="p-6 bg-black/40 rounded-2xl border border-white/5 space-y-4">
+                  <div key={cat.id} className="p-8 bg-black/40 rounded-3xl border border-white/5 space-y-6">
                     <div className="flex items-center justify-between">
-                       <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Category: {cat.id}</span>
+                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">SLOT: {cat.id}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Step Label</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Label</label>
                         <input 
                           type="text" 
                           value={cat.label}
                           onChange={(e) => updateCategory(idx, 'label', e.target.value)}
-                          className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[10px] text-white font-bold outline-none"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white font-bold outline-none"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Question</label>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Question</label>
                         <input 
                           type="text" 
                           value={cat.question}
                           onChange={(e) => updateCategory(idx, 'question', e.target.value)}
-                          className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[10px] text-white font-bold outline-none"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white font-bold outline-none"
                         />
                       </div>
                     </div>
@@ -337,16 +261,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
             <button 
               onClick={handleSaveConfig}
               disabled={isProcessing}
-              className="w-full py-6 bg-white text-black rounded-[24px] font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
+              className="w-full py-8 bg-white text-black rounded-[32px] font-black text-sm uppercase tracking-[0.6em] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15)] hover:scale-[1.02] active:scale-95 transition-all"
             >
-              {isProcessing ? 'APPLYING CONFIG...' : 'SAVE GLOBAL CONFIGURATION'}
+              {isProcessing ? 'SYNCHRONIZING...' : 'COMMIT GLOBAL CONFIG'}
             </button>
           </div>
         )}
       </div>
 
-      <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl">
-        <p className="text-[8px] font-black text-slate-800 uppercase tracking-[1em]">STATION MANAGEMENT INTERFACE V3.5</p>
+      <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl opacity-20">
+        <p className="text-[10px] font-black text-white uppercase tracking-[1.5em]">HARAJ MANAGEMENT V4.0</p>
       </footer>
     </div>
   );

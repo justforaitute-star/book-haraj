@@ -63,6 +63,7 @@ const App: React.FC = () => {
   const fetchConfig = useCallback(async () => {
     if (!supabase) return;
     try {
+      // Use maybeSingle to prevent error logging on 404
       const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
       if (!error && data) {
         setConfig({
@@ -70,20 +71,19 @@ const App: React.FC = () => {
           background_url: data.background_url || '',
           categories: data.categories || DEFAULT_CATEGORIES
         });
-      } else if (error) {
-        console.warn("Settings fetch warning:", error.message);
       }
     } catch (err) {
-      console.error("Failed to fetch config:", err);
+      console.error("Configuration sync error:", err);
     }
   }, []);
 
-  // Update background image on root
+  // Update background image dynamically on the root document
   useEffect(() => {
+    const root = document.documentElement;
     if (config.background_url) {
-      document.documentElement.style.setProperty('--bg-image', `url(${config.background_url})`);
+      root.style.setProperty('--bg-image', `url(${config.background_url})`);
     } else {
-      document.documentElement.style.setProperty('--bg-image', 'none');
+      root.style.setProperty('--bg-image', 'none');
     }
   }, [config.background_url]);
 
@@ -98,7 +98,7 @@ const App: React.FC = () => {
       if (fetchError) throw fetchError;
       if (data) setReviews(data as Review[]);
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error("Reviews sync error:", err);
     }
   }, []);
 
@@ -139,7 +139,7 @@ const App: React.FC = () => {
     if (!PHOTOPRISM_API_KEY) return 'GUEST_ID';
     try {
       const baseUrl = PHOTOPRISM_URL.replace(/\/$/, '');
-      setSubmissionStatus('Connecting to AI Engine...');
+      setSubmissionStatus('Authenticating Identity...');
       const base64Data = base64Photo.split(',')[1];
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Uint8Array(byteCharacters.length);
@@ -147,18 +147,21 @@ const App: React.FC = () => {
       const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
       const formData = new FormData();
       formData.append('file', blob, `kiosk_${Date.now()}.jpg`);
+      
       await fetch(`${baseUrl}/api/v1/import/upload`, {
         method: 'POST',
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY },
         body: formData
       });
+      
       await fetch(`${baseUrl}/api/v1/index`, {
         method: 'POST',
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: '/', cleanup: false })
       });
+
       for (let i = 0; i < 8; i++) {
-        setSubmissionStatus(`Authenticating Face (${i+1}/8)...`);
+        setSubmissionStatus(`AI Recognition (${i+1}/8)...`);
         await new Promise(r => setTimeout(r, 2000));
         const res = await fetch(`${baseUrl}/api/v1/photos?count=15&order=added`, {
           headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
@@ -175,7 +178,7 @@ const App: React.FC = () => {
       }
       return `GUEST_${Date.now().toString(36).toUpperCase()}`;
     } catch (err) {
-      console.error("PhotoPrism identification error:", err);
+      console.error("Facial ID failed:", err);
       return 'GUEST_ID';
     }
   };
@@ -187,7 +190,7 @@ const App: React.FC = () => {
     const byteNumbers = new Uint8Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
     const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
-    const fileName = `${Date.now()}_review.jpg`;
+    const fileName = `review_${Date.now()}.jpg`;
     await supabase.storage.from('photos').upload(fileName, blob);
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
     return publicUrl;
@@ -211,7 +214,7 @@ const App: React.FC = () => {
         comment: details.comment,
         timestamp: Date.now()
       };
-      setSubmissionStatus('Saving Memory...');
+      setSubmissionStatus('Publishing...');
       const { data, error } = await supabase.from('reviews').insert([newReview]).select();
       if (error) {
         const fallbackReview = { ...newReview };
@@ -225,7 +228,7 @@ const App: React.FC = () => {
       setStep(KioskStep.THANKS);
       fetchReviews();
     } catch (err: any) {
-      alert(`Submission Error: ${err.message}`);
+      alert(`Submission failed: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -255,15 +258,19 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`h-full w-full relative overflow-hidden flex flex-col ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
-      {!isRemoteMode && step === KioskStep.HOME && <header className="pt-16 pb-2 w-full flex flex-col items-center z-20 shrink-0"><Logo3 logoUrl={config.logo_url} /></header>}
+    <div className={`h-full w-full relative overflow-hidden flex flex-col transition-colors duration-1000 ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
+      {!isRemoteMode && step === KioskStep.HOME && (
+        <header className="pt-20 pb-4 w-full flex flex-col items-center z-20 shrink-0">
+          <Logo3 logoUrl={config.logo_url} />
+        </header>
+      )}
       <main className="flex-1 w-full flex items-center justify-center relative z-10 overflow-hidden">
         {isSubmitting ? (
-          <div className="flex flex-col items-center gap-6 animate-fade-in">
-             <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex flex-col items-center gap-8 animate-fade-in">
+             <div className="w-20 h-20 border-[6px] border-white/10 border-t-white rounded-full animate-spin shadow-2xl"></div>
              <div className="text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white animate-pulse mb-1">Processing</p>
-                <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">{submissionStatus}</p>
+                <p className="text-xs font-black uppercase tracking-[0.6em] text-white animate-pulse mb-2">Processing</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{submissionStatus}</p>
              </div>
           </div>
         ) : (
