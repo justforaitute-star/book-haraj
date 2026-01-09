@@ -7,13 +7,22 @@ interface ReviewWallProps {
   fullScreen?: boolean;
   singleReviewId?: string | null;
   onExit?: () => void;
+  onRefresh?: () => void;
 }
 
-const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null, onExit }) => {
+const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null, onExit, onRefresh }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number | null>(null);
   const scrollPosRef = useRef(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !onRefresh) return;
+    setIsRefreshing(true);
+    await onRefresh();
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
 
   const toggleFullscreen = () => {
     const doc = document.documentElement as any;
@@ -93,6 +102,16 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
               </div>
             )}
             
+            <button 
+              onClick={handleRefresh} 
+              className={`w-10 h-10 md:w-14 md:h-14 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl border border-white/10 active:scale-90 ${isRefreshing ? 'animate-spin' : ''}`}
+              title="Refresh Feed"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+
             <button onClick={toggleFullscreen} className="w-10 h-10 md:w-14 md:h-14 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl border border-white/10 active:scale-90">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isFullscreen ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />}

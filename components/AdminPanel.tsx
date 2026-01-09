@@ -143,6 +143,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     }));
   };
 
+  const bgConfig = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
+
   return (
     <div className="h-full w-full bg-black flex flex-col items-center p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100]">
       <header className="w-full max-w-4xl flex items-center justify-between mb-12 shrink-0">
@@ -257,16 +259,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                   Backdrop Tuning
                 </h3>
+
+                {/* LIVE PREVIEW MONITOR */}
+                <div className="relative w-full aspect-video bg-black rounded-3xl border-4 border-white/20 overflow-hidden shadow-2xl">
+                   <div className="absolute inset-0 pointer-events-none z-10">
+                      {/* Simulated Interface Grid */}
+                      <div className="absolute inset-x-0 bottom-4 flex justify-center">
+                        <div className="w-1/2 h-4 bg-white/20 rounded-full blur-[2px]"></div>
+                      </div>
+                      <div className="absolute top-4 inset-x-0 flex justify-center">
+                        <div className="w-1/3 h-6 border-2 border-white/10 rounded-lg blur-[1px]"></div>
+                      </div>
+                      <div className="absolute inset-0 bg-radial-gradient(circle, transparent 0%, rgba(0,0,0,0.6) 100%)"></div>
+                   </div>
+                   
+                   {/* The Mirror Image */}
+                   <img 
+                      src={localConfig.background_url} 
+                      alt="Preview Mirror"
+                      className="w-full h-full object-cover origin-center transition-all duration-300"
+                      style={{
+                        transform: `scale(${bgConfig.zoom}) translate(${bgConfig.x}%, ${bgConfig.y}%)`,
+                        filter: `blur(${bgConfig.blur}px)`
+                      }}
+                   />
+                   
+                   <div className="absolute bottom-4 left-4 z-20">
+                      <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                         <p className="text-[8px] font-black text-white uppercase tracking-widest">Live Monitor Preview</p>
+                      </div>
+                   </div>
+                </div>
                 
                 <div className="space-y-8">
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digital Zoom</label>
-                       <span className="text-xs font-mono font-bold text-white">{(localConfig.background_config?.zoom || 1).toFixed(1)}x</span>
+                       <span className="text-xs font-mono font-bold text-white">{bgConfig.zoom.toFixed(1)}x</span>
                     </div>
                     <input 
                       type="range" min="1" max="5" step="0.1"
-                      value={localConfig.background_config?.zoom || 1}
+                      value={bgConfig.zoom}
                       onChange={(e) => updateBgConfig('zoom', parseFloat(e.target.value))}
                       className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
                     />
@@ -276,11 +309,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Horizontal Offset</label>
-                         <span className="text-xs font-mono font-bold text-white">{localConfig.background_config?.x || 0}%</span>
+                         <span className="text-xs font-mono font-bold text-white">{bgConfig.x}%</span>
                       </div>
                       <input 
                         type="range" min="-100" max="100" step="1"
-                        value={localConfig.background_config?.x || 0}
+                        value={bgConfig.x}
                         onChange={(e) => updateBgConfig('x', parseInt(e.target.value))}
                         className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
                       />
@@ -288,11 +321,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vertical Offset</label>
-                         <span className="text-xs font-mono font-bold text-white">{localConfig.background_config?.y || 0}%</span>
+                         <span className="text-xs font-mono font-bold text-white">{bgConfig.y}%</span>
                       </div>
                       <input 
                         type="range" min="-100" max="100" step="1"
-                        value={localConfig.background_config?.y || 0}
+                        value={bgConfig.y}
                         onChange={(e) => updateBgConfig('y', parseInt(e.target.value))}
                         className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
                       />
@@ -302,11 +335,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Atmospheric Blur</label>
-                       <span className="text-xs font-mono font-bold text-white">{localConfig.background_config?.blur || 0}px</span>
+                       <span className="text-xs font-mono font-bold text-white">{bgConfig.blur}px</span>
                     </div>
                     <input 
                       type="range" min="0" max="100" step="1"
-                      value={localConfig.background_config?.blur || 0}
+                      value={bgConfig.blur}
                       onChange={(e) => updateBgConfig('blur', parseInt(e.target.value))}
                       className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
                     />
@@ -315,7 +348,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
 
                 <div className="p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
                   <p className="text-[9px] font-black text-yellow-500/80 uppercase tracking-widest leading-relaxed">
-                    Notice: Adjustments are applied in real-time to the current station view. Changes will only be permanent after clicking "Commit Global Config".
+                    Notice: Adjustments are mirrored to the monitor and the global station view in real-time. Changes are persistent only after clicking "Commit Global Config".
                   </p>
                 </div>
               </div>

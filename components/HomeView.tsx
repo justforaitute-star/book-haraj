@@ -5,12 +5,14 @@ interface HomeViewProps {
   onStart: () => void;
   onToggleMode: () => void;
   onAdmin: () => void;
+  onRefresh?: () => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) => {
+const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onRefresh }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [qrTick, setQrTick] = useState(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Update QR salt every 20 seconds
   useEffect(() => {
@@ -19,6 +21,14 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) =
     }, 20000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setQrTick(Date.now());
+    if (onRefresh) await onRefresh();
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
 
   const toggleFullscreen = () => {
     const doc = document.documentElement as any;
@@ -61,18 +71,30 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin }) =
 
   return (
     <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
-      <button 
-        onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-        className="fixed top-8 right-8 w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 z-[100] shadow-2xl active:scale-90"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          {isFullscreen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-          )}
-        </svg>
-      </button>
+      <div className="fixed top-8 right-8 flex gap-3 z-[100]">
+        <button 
+          onClick={handleRefresh}
+          className={`w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin text-white' : ''}`}
+          title="Refresh Data"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+
+        <button 
+          onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+          className="w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {isFullscreen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+            )}
+          </svg>
+        </button>
+      </div>
 
       <div className="flex flex-col items-center w-full animate-fade-in-up">
         <div className="overflow-hidden mb-12">

@@ -78,23 +78,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Update background styling dynamically
-  useEffect(() => {
-    const root = document.documentElement;
-    const bg = config.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
-    
-    if (config.background_url) {
-      root.style.setProperty('--bg-image', `url(${config.background_url})`);
-      // Use CSS variables to control the transform
-      root.style.setProperty('--bg-zoom', `${bg.zoom}`);
-      root.style.setProperty('--bg-x', `${bg.x}%`);
-      root.style.setProperty('--bg-y', `${bg.y}%`);
-      root.style.setProperty('--bg-blur', `${bg.blur}px`);
-    } else {
-      root.style.setProperty('--bg-image', 'none');
-    }
-  }, [config.background_url, config.background_config]);
-
   const fetchReviews = useCallback(async () => {
     if (!supabase) return;
     try {
@@ -109,6 +92,26 @@ const App: React.FC = () => {
       console.error("Reviews sync error:", err);
     }
   }, []);
+
+  const handleManualRefresh = useCallback(async () => {
+    await Promise.all([fetchReviews(), fetchConfig()]);
+  }, [fetchReviews, fetchConfig]);
+
+  // Update background styling dynamically
+  useEffect(() => {
+    const root = document.documentElement;
+    const bg = config.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
+    
+    if (config.background_url) {
+      root.style.setProperty('--bg-image', `url(${config.background_url})`);
+      root.style.setProperty('--bg-zoom', `${bg.zoom}`);
+      root.style.setProperty('--bg-x', `${bg.x}%`);
+      root.style.setProperty('--bg-y', `${bg.y}%`);
+      root.style.setProperty('--bg-blur', `${bg.blur}px`);
+    } else {
+      root.style.setProperty('--bg-image', 'none');
+    }
+  }, [config.background_url, config.background_config]);
 
   useEffect(() => {
     fetchReviews();
@@ -262,7 +265,7 @@ const App: React.FC = () => {
   }
 
   if (isDisplayMode) {
-    return <ReviewWall reviews={reviews} fullScreen onExit={() => setIsDisplayMode(false)} />;
+    return <ReviewWall reviews={reviews} fullScreen onExit={() => setIsDisplayMode(false)} onRefresh={handleManualRefresh} />;
   }
 
   return (
@@ -283,7 +286,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && <HomeView onStart={() => setStep(KioskStep.CAMERA)} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} />}
+            {step === KioskStep.HOME && <HomeView onStart={() => setStep(KioskStep.CAMERA)} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} />}
