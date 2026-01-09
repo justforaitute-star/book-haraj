@@ -99,7 +99,6 @@ const App: React.FC = () => {
     await Promise.all([fetchReviews(), fetchConfig()]);
   }, [fetchReviews, fetchConfig]);
 
-  // Update background styling dynamically
   useEffect(() => {
     const root = document.documentElement;
     const bg = config.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
@@ -216,7 +215,6 @@ const App: React.FC = () => {
     try {
       const rawPhoto = currentReview.photo || '';
       
-      // Conditionally run face ID
       const [faceId, photoUrl] = await Promise.all([
         config.face_id_enabled ? identifyFaceWithPhotoPrism(rawPhoto) : Promise.resolve(''),
         uploadToSupabase(rawPhoto)
@@ -275,13 +273,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`h-full w-full relative overflow-hidden flex flex-col transition-colors duration-1000 ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
+    <div className={`h-full w-full relative flex flex-col transition-colors duration-1000 ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
       {!isRemoteMode && step === KioskStep.HOME && (
-        <header className="pt-20 pb-4 w-full flex flex-col items-center z-20 shrink-0">
-          <Logo3 logoUrl={config.logo_url} />
+        <header className="pt-20 pb-4 w-full flex flex-col items-center shrink-0 pointer-events-none z-20">
+          <div className="pointer-events-auto">
+            <Logo3 logoUrl={config.logo_url} />
+          </div>
         </header>
       )}
-      <main className="flex-1 w-full flex items-center justify-center relative z-10 overflow-hidden">
+      <main className="flex-1 w-full flex items-center justify-center relative overflow-hidden z-10">
         {isSubmitting ? (
           <div className="flex flex-col items-center gap-8 animate-fade-in">
              <div className="w-20 h-20 border-[6px] border-white/10 border-t-white rounded-full animate-spin shadow-2xl"></div>

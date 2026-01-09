@@ -13,7 +13,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin, logoUrl }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'haraj@focus1423') {
+    if (password === 'haraj') {
       onLogin();
     } else {
       setError(true);

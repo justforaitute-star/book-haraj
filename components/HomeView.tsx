@@ -63,20 +63,19 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
     return url.toString();
   }, []);
 
-  // Encodes the URL with a rotating timestamp to change the QR pattern
   const qrCodeUrl = useMemo(() => {
     const dynamicUrl = `${remoteUrl}${remoteUrl.includes('?') ? '&' : '?'}salt=${qrTick}`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicUrl)}&bgcolor=000000&color=ffffff`;
   }, [remoteUrl, qrTick]);
 
   return (
-    <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative">
-      {/* Consolidated Action Bar at Top Right */}
-      <div className="fixed top-8 right-8 flex flex-col items-end gap-3 z-[100]">
+    <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-12 text-center px-6 relative z-10">
+      {/* Consolidated Action Bar at Top Right - Fixed position with high z-index and explicit interaction */}
+      <div className="fixed top-8 right-8 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
         <div className="flex gap-3">
           <button 
             onClick={handleRefresh}
-            className={`w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin text-white' : ''}`}
+            className={`w-12 h-12 md:w-14 md:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/20 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin text-white' : ''}`}
             title="Refresh Data"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -86,7 +85,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
 
           <button 
             onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-            className="w-12 h-12 md:w-14 md:h-14 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all border border-white/10 shadow-2xl active:scale-90"
+            className="w-12 h-12 md:w-14 md:h-14 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/20 shadow-2xl active:scale-90"
             title="Toggle Fullscreen"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,7 +99,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
 
           <button 
             onClick={() => setShowSetup(!showSetup)}
-            className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all shadow-xl border border-white/10 active:scale-90 ${showSetup ? 'bg-white text-black rotate-90 scale-110' : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-white'}`}
+            className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all shadow-xl border border-white/20 active:scale-90 ${showSetup ? 'bg-white text-black rotate-90 scale-110' : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white backdrop-blur-xl'}`}
             title="Admin Menu"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,9 +108,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
           </button>
         </div>
 
-        {/* Setup Panel positioned below the buttons */}
         {showSetup && (
-          <div className="bg-slate-900/95 backdrop-blur-2xl p-6 rounded-[32px] shadow-2xl border border-white/10 mt-2 w-72 text-left animate-fade-in-up origin-top-right">
+          <div className="bg-slate-900/95 backdrop-blur-3xl p-6 rounded-[32px] shadow-2xl border border-white/10 mt-2 w-72 text-left animate-fade-in-up origin-top-right z-[210]">
             <h4 className="text-[11px] font-black text-white uppercase mb-4 tracking-widest flex items-center gap-2">
               <div className="w-2 h-2 bg-white animate-pulse"></div>
               Station Controls
@@ -140,7 +138,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onStart, onToggleMode, onAdmin, onR
         )}
       </div>
 
-      <div className="flex flex-col items-center w-full animate-fade-in-up">
+      <div className="flex flex-col items-center w-full animate-fade-in-up pointer-events-auto">
         <div className="overflow-hidden mb-12">
           <p className="text-xl text-slate-400 max-w-sm mx-auto leading-relaxed font-black uppercase tracking-[0.3em]">Share Your Story</p>
         </div>
