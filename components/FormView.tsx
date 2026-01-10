@@ -8,6 +8,7 @@ interface FormViewProps {
   onSubmit: (details: { name: string; email: string; ratings: DetailedRatings; comment: string }) => void;
   onCancel: () => void;
   isRemote?: boolean;
+  emailEnabled?: boolean;
 }
 
 const COMMENT_SUGGESTIONS = [
@@ -31,7 +32,7 @@ const RoundedStar = ({ active, animating, sizeClass }: { active: boolean; animat
   </svg>
 );
 
-const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCancel, isRemote = false }) => {
+const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCancel, isRemote = false, emailEnabled = true }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,8 +45,19 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
     return initial;
   });
 
-  // Steps: 0: Name, 1: Email, 2..N+1: Ratings, N+2: Comments
-  const totalSteps = categories.length + 3; 
+  // Steps Structure:
+  // Step 0: Name
+  // Step 1: Email (If enabled)
+  // Step 1/2...: Rating Categories
+  // Last Step: Comments
+
+  // totalSteps calculation: Name (1) + Email (1 if enabled) + Categories (N) + Comments (1)
+  const totalSteps = 1 + (emailEnabled ? 1 : 0) + categories.length + 1; 
+
+  // Helper to get the actual index for rating categories based on currentStep
+  const getCategoryIndex = (step: number) => {
+    return emailEnabled ? step - 2 : step - 1;
+  };
 
   const handleRatingChange = (categoryId: string, value: number) => {
     setRatings(prev => ({ ...prev, [categoryId]: value }));
@@ -57,7 +69,10 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
   };
 
   const nextStep = () => {
+    // Validation
     if (currentStep === 0 && !name.trim()) return;
+    if (emailEnabled && currentStep === 1 && email.length > 0 && !isValidEmail(email)) return;
+
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -92,6 +107,131 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
   };
 
+  // Determine what type of screen to show
+  const renderStepContent = () => {
+    // 0: Name Screen
+    if (currentStep === 0) {
+      return (
+        <div className="space-y-4 text-center animate-fade-in-up">
+          <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">WELCOME</h2>
+          <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
+            Your Name
+          </h3>
+          <div className="relative max-w-xs mx-auto pt-4">
+            <input
+              type="text"
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && name.trim() && nextStep()}
+              placeholder="TYPE HERE..."
+              className={`w-full text-center ${isRemote ? 'text-xl py-2' : 'text-4xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black uppercase bg-transparent text-white`}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // 1: Email Screen (Optional based on toggle)
+    if (emailEnabled && currentStep === 1) {
+      return (
+        <div className="space-y-4 text-center animate-fade-in-up">
+          <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">STAY IN TOUCH</h2>
+          <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
+            Email Address
+          </h3>
+          <div className="relative max-w-xs mx-auto pt-4">
+            <input
+              type="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && isValidEmail(email) && nextStep()}
+              placeholder="OPTIONAL..."
+              className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-3xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black bg-transparent text-white`}
+            />
+            {!isValidEmail(email) && email.length > 0 && (
+              <p className="text-red-500 text-[9px] font-black uppercase mt-2 tracking-widest">Invalid Email Format</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // N: Rating Category Screens
+    const catIdx = getCategoryIndex(currentStep);
+    if (catIdx >= 0 && catIdx < categories.length) {
+      const category = categories[catIdx];
+      return (
+        <div className="space-y-6 text-center animate-fade-in-up">
+          <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">
+            {category.label}
+          </h2>
+          <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-tight max-w-xs mx-auto`}>
+            {category.question}
+          </h3>
+          
+          <div className={`flex justify-center ${isRemote ? 'gap-2' : 'gap-6'} pt-4`}>
+            {[1, 2, 3, 4, 5].map((star) => {
+              const currentRating = ratings[category.id] || 0;
+              const isActive = star <= currentRating;
+              const isAnimating = animatingStar === star;
+              
+              return (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => handleRatingChange(category.id, star)}
+                  className={`${isRemote ? 'w-10 h-10' : 'w-20 h-20'} transition-all active:scale-90`}
+                >
+                  <RoundedStar active={isActive} animating={isAnimating} sizeClass="w-full h-full" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // Last: Comments Screen
+    if (currentStep === totalSteps - 1) {
+      return (
+        <div className="space-y-6 text-center animate-fade-in-up">
+          <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">LAST STEP</h2>
+          <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-none`}>
+            Final thoughts?
+          </h3>
+          
+          <div className="flex flex-wrap justify-center gap-1.5 max-w-xs mx-auto pt-2">
+            {COMMENT_SUGGESTIONS.map((sug, i) => (
+              <button
+                key={i}
+                onClick={() => addSuggestion(sug)}
+                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-[9px] font-bold text-white/50 hover:text-white active:scale-95"
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+
+          <div className="max-w-xs mx-auto w-full">
+            <textarea
+              rows={2}
+              autoFocus
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="OPTIONAL..."
+              className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-2xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 resize-none bg-transparent font-bold tracking-tight text-white`}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className={`bg-black flex flex-col w-full relative transition-all duration-500 ${isRemote ? 'h-full max-w-none' : 'h-[85vh] max-w-4xl rounded-[40px] border border-white/10 shadow-2xl'} overflow-hidden animate-fade-in`}>
       
@@ -117,115 +257,8 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
       </div>
 
       <div className={`flex-1 flex flex-col items-center justify-center ${isRemote ? 'px-6 pt-16' : 'px-20 pt-24'} pb-6 overflow-y-auto no-scrollbar`}>
-        
         <div className="w-full transition-all duration-300 transform" key={currentStep}>
-          
-          {currentStep === 0 && (
-            <div className="space-y-4 text-center animate-fade-in-up">
-              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">WELCOME</h2>
-              <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
-                Your Name
-              </h3>
-              <div className="relative max-w-xs mx-auto pt-4">
-                <input
-                  type="text"
-                  autoFocus
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && name.trim() && nextStep()}
-                  placeholder="TYPE HERE..."
-                  className={`w-full text-center ${isRemote ? 'text-xl py-2' : 'text-4xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black uppercase bg-transparent text-white`}
-                />
-              </div>
-            </div>
-          )}
-
-          {currentStep === 1 && (
-            <div className="space-y-4 text-center animate-fade-in-up">
-              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">STAY IN TOUCH</h2>
-              <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
-                Email Address
-              </h3>
-              <div className="relative max-w-xs mx-auto pt-4">
-                <input
-                  type="email"
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && isValidEmail(email) && nextStep()}
-                  placeholder="OPTIONAL..."
-                  className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-3xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black bg-transparent text-white`}
-                />
-                {!isValidEmail(email) && email.length > 0 && (
-                  <p className="text-red-500 text-[9px] font-black uppercase mt-2 tracking-widest">Invalid Email Format</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {currentStep > 1 && currentStep <= (categories.length + 1) && (
-            <div className="space-y-6 text-center animate-fade-in-up">
-              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">
-                {categories[currentStep - 2].label}
-              </h2>
-              <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-tight max-w-xs mx-auto`}>
-                {categories[currentStep - 2].question}
-              </h3>
-              
-              <div className={`flex justify-center ${isRemote ? 'gap-2' : 'gap-6'} pt-4`}>
-                {[1, 2, 3, 4, 5].map((star) => {
-                  const category = categories[currentStep - 2];
-                  const currentRating = ratings[category.id] || 0;
-                  const isActive = star <= currentRating;
-                  const isAnimating = animatingStar === star;
-                  
-                  return (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => handleRatingChange(category.id, star)}
-                      className={`${isRemote ? 'w-10 h-10' : 'w-20 h-20'} transition-all active:scale-90`}
-                    >
-                      <RoundedStar active={isActive} animating={isAnimating} sizeClass="w-full h-full" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {currentStep === totalSteps - 1 && (
-            <div className="space-y-6 text-center animate-fade-in-up">
-              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">LAST STEP</h2>
-              <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-none`}>
-                Final thoughts?
-              </h3>
-              
-              <div className="flex flex-wrap justify-center gap-1.5 max-w-xs mx-auto pt-2">
-                {COMMENT_SUGGESTIONS.map((sug, i) => (
-                  <button
-                    key={i}
-                    onClick={() => addSuggestion(sug)}
-                    className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-[9px] font-bold text-white/50 hover:text-white active:scale-95"
-                  >
-                    {sug}
-                  </button>
-                ))}
-              </div>
-
-              <div className="max-w-xs mx-auto w-full">
-                <textarea
-                  rows={2}
-                  autoFocus
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="OPTIONAL..."
-                  className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-2xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 resize-none bg-transparent font-bold tracking-tight text-white`}
-                />
-              </div>
-            </div>
-          )}
+          {renderStepContent()}
         </div>
       </div>
 
@@ -239,9 +272,12 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
 
         <button
           onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
-          disabled={(currentStep === 0 && !name.trim()) || (currentStep === 1 && !isValidEmail(email))}
+          disabled={(currentStep === 0 && !name.trim()) || (emailEnabled && currentStep === 1 && email.length > 0 && !isValidEmail(email))}
           className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all ${
-            (currentStep === totalSteps - 1) || (currentStep > 1 && currentStep <= (categories.length + 1) && (ratings[categories[currentStep-2].id] > 0)) || (currentStep === 0 && name.trim()) || (currentStep === 1 && isValidEmail(email))
+            (currentStep === totalSteps - 1) || 
+            (getCategoryIndex(currentStep) >= 0 && getCategoryIndex(currentStep) < categories.length && (ratings[categories[getCategoryIndex(currentStep)].id] > 0)) || 
+            (currentStep === 0 && name.trim()) || 
+            (emailEnabled && currentStep === 1 && isValidEmail(email))
             ? 'bg-white text-black' 
             : 'bg-white/5 text-white/10'
           }`}

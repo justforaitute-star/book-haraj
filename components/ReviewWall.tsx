@@ -41,10 +41,19 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Robust Unified Rating Calculation (Matches HomeView)
   const averageRating = useMemo(() => {
-    if (reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, r) => acc + (r.ratings?.overall || 5), 0);
-    return (sum / reviews.length).toFixed(1);
+    if (reviews.length === 0) return "0.0";
+    
+    const reviewScores = reviews.map(r => {
+      const values = Object.values(r.ratings || {}) as number[];
+      if (values.length === 0) return 0;
+      return values.reduce((a: number, b: number) => a + b, 0) / values.length;
+    }).filter(score => score > 0);
+
+    if (reviewScores.length === 0) return "5.0";
+    
+    return (reviewScores.reduce((a: number, b: number) => a + b, 0) / reviewScores.length).toFixed(1);
   }, [reviews]);
 
   const displayReviews = useMemo(() => {
@@ -126,7 +135,9 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
         {displayReviews.length > 0 ? (
           <div className={`${singleReviewId ? 'max-w-md w-full' : 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 md:gap-8 max-w-[1800px]'} mx-auto pb-96`}>
             {displayReviews.map((review, index) => {
-              const overallRating = review.ratings?.overall || 5;
+              // Internal Card Rating logic: Average of all ratings in this specific review
+              const rValues = Object.values(review.ratings || {}) as number[];
+              const cardRating = rValues.length > 0 ? Math.round(rValues.reduce((a, b) => a + b, 0) / rValues.length) : 5;
               const serialNum = review.serial_number ? `#${String(review.serial_number).padStart(3, '0')}` : `#${index + 1}`;
 
               return (
@@ -138,7 +149,7 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex gap-1 text-yellow-400">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={`text-base md:text-lg ${i < overallRating ? 'opacity-100' : 'opacity-20 text-white'}`}>★</span>
+                        <span key={i} className={`text-base md:text-lg ${i < cardRating ? 'opacity-100' : 'opacity-20 text-white'}`}>★</span>
                       ))}
                     </div>
                   </div>

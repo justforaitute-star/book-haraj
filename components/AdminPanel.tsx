@@ -115,7 +115,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         background_url: localConfig.background_url,
         background_config: localConfig.background_config,
         categories: localConfig.categories,
-        face_id_enabled: localConfig.face_id_enabled
+        face_id_enabled: localConfig.face_id_enabled,
+        email_enabled: localConfig.email_enabled
       });
       
       if (error) throw error;
@@ -165,6 +166,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
 
   const toggleFaceId = () => {
     setLocalConfig(prev => ({ ...prev, face_id_enabled: !prev.face_id_enabled }));
+  };
+
+  const toggleEmail = () => {
+    setLocalConfig(prev => ({ ...prev, email_enabled: !prev.email_enabled }));
   };
 
   const bgConfig = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
@@ -275,17 +280,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
               </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
-              <div>
-                <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Recognition Engine</h3>
-                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Facial grouping for visitors</p>
+            <div className="space-y-6">
+              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
+                <div>
+                  <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Recognition Engine</h3>
+                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Facial grouping for visitors</p>
+                </div>
+                <button 
+                  onClick={toggleFaceId}
+                  className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.face_id_enabled ? 'bg-white' : 'bg-white/10'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.face_id_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
+                </button>
               </div>
-              <button 
-                onClick={toggleFaceId}
-                className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.face_id_enabled ? 'bg-white' : 'bg-white/10'}`}
-              >
-                <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.face_id_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
-              </button>
+
+              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
+                <div>
+                  <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Email Collection</h3>
+                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Ask for visitor email addresses</p>
+                </div>
+                <button 
+                  onClick={toggleEmail}
+                  className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.email_enabled ? 'bg-white' : 'bg-white/10'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.email_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
+                </button>
+              </div>
             </div>
 
             {showPlacementEditor && localConfig.background_url && (
