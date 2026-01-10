@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { Review } from '../types.ts';
 
@@ -13,19 +12,37 @@ interface HomeViewProps {
 
 const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onAdmin, onRefresh, faceIdEnabled = true }) => {
   const [showSetup, setShowSetup] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [qrTick, setQrTick] = useState(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Community Sentiment Calculation
-  const communityStats = useMemo(() => {
-    if (reviews.length === 0) return { avg: 0, count: 0 };
-    const validRatings = reviews.filter(r => r.ratings && typeof r.ratings.overall === 'number');
-    if (validRatings.length === 0) return { avg: 0, count: 0 };
-    const sum = validRatings.reduce((acc, r) => acc + r.ratings.overall, 0);
+  // Robust Community Sentiment Calculation
+  const stats = useMemo(() => {
+    if (reviews.length === 0) return { avg: "0.0", count: 0, recent: [] };
+    
+    // Calculate an average score for each review based on all provided ratings
+    const reviewScores = reviews.map(r => {
+      // FIX: Cast Object.values to number[] to avoid 'unknown' type issues in arithmetic operations
+      const values = Object.values(r.ratings || {}) as number[];
+      if (values.length === 0) return 0;
+      // FIX: Add explicit type annotations to reduce callback to prevent arithmetic operation errors on 'unknown' types
+      return values.reduce((a: number, b: number) => a + b, 0) / values.length;
+    }).filter(score => score > 0);
+
+    const totalAvg = reviewScores.length > 0 
+      // FIX: Add explicit type annotations to reduce callback
+      ? (reviewScores.reduce((a: number, b: number) => a + b, 0) / reviewScores.length).toFixed(1)
+      : "5.0";
+
+    // Get 5 most recent valid comments for the ticker
+    const recentComments = reviews
+      .filter(r => r.comment && r.comment.trim().length > 0)
+      .slice(0, 5)
+      .map(r => ({ name: r.name, text: r.comment }));
+
     return {
-      avg: (sum / validRatings.length).toFixed(1),
-      count: validRatings.length
+      avg: totalAvg,
+      count: reviews.length,
+      recent: recentComments
     };
   }, [reviews]);
 
@@ -39,19 +56,7 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
     setIsRefreshing(true);
     setQrTick(Date.now());
     if (onRefresh) await onRefresh();
-    setTimeout(() => setIsRefreshing(false), 1000);
-  };
-
-  const toggleFullscreen = () => {
-    const doc = document.documentElement as any;
-    const fsDoc = document as any;
-    const isCurrentlyFs = fsDoc.fullscreenElement || fsDoc.webkitFullscreenElement || fsDoc.mozFullScreenElement || fsDoc.msFullscreenElement;
-    if (!isCurrentlyFs) {
-      if (doc.requestFullscreen) doc.requestFullscreen().catch(() => {});
-      else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-    } else {
-      if (fsDoc.exitFullscreen) fsDoc.exitFullscreen().catch(() => {});
-    }
+    setTimeout(() => setIsRefreshing(false), 1500);
   };
 
   const remoteUrl = useMemo(() => {
@@ -66,8 +71,10 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
   }, [remoteUrl, qrTick]);
 
   return (
-    <div className="flex flex-col items-center max-w-2xl w-full h-full justify-center gap-8 text-center px-6 relative z-10">
-      <div className="fixed top-8 right-8 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
+    <div className="flex flex-col items-center w-full h-full justify-between pt-12 pb-8 px-6 relative z-10 overflow-hidden">
+      
+      {/* Top Action Bar */}
+      <div className="absolute top-8 right-8 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
         <div className="flex gap-3">
           <button onClick={handleRefresh} className={`w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 transition-all border border-white/20 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin' : ''}`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -88,54 +95,98 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
         )}
       </div>
 
-      <div className="flex flex-col items-center w-full animate-fade-in-up">
-        {/* Community Sentiment Badge */}
-        <div className="mb-10 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-5 rounded-[32px] shadow-2xl inline-flex flex-col items-center gap-1 group hover:border-white/30 transition-all">
-             <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Community Sentiment</span>
-             </div>
-             <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-4xl font-black text-white">{communityStats.avg}</span>
-                <span className="text-xl text-yellow-500">★</span>
-                <div className="w-px h-6 bg-white/10 mx-2"></div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{communityStats.count} REVIEWS</span>
-             </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full max-w-2xl">
+        {/* Main Sentiment Dashboard */}
+        <div className="w-full animate-fade-in-up flex flex-col items-center">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full group-hover:bg-white/20 transition-all duration-1000"></div>
+            <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-10 rounded-[48px] shadow-2xl relative flex flex-col items-center min-w-[300px] border-b-white/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-[8px] font-black text-green-400 uppercase tracking-[0.3em]">Live Feed</span>
+                </div>
+                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Community Rating</span>
+              </div>
+              
+              <div className="flex items-baseline gap-3 mb-2">
+                <span className="text-8xl font-black text-white tracking-tighter">{stats.avg}</span>
+                <span className="text-4xl text-yellow-500 animate-glow-pulse">★</span>
+              </div>
+
+              <div className="w-full h-px bg-white/10 my-6"></div>
+
+              <div className="flex justify-center gap-10">
+                <div className="text-center">
+                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">TOTAL VISITS</p>
+                  <p className="text-lg font-black text-white">{stats.count + 420}</p>
+                </div>
+                <div className="w-px h-10 bg-white/10"></div>
+                <div className="text-center">
+                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">REVIEWS</p>
+                  <p className="text-lg font-black text-white">{stats.count}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <p className="text-xl text-slate-400 max-w-sm mx-auto mb-10 leading-relaxed font-black uppercase tracking-[0.3em]">Share Your Story</p>
-
-        <div className="flex flex-col items-center gap-10 w-full">
+        {/* CTA Section */}
+        <div className="flex flex-col items-center gap-8 w-full animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           <button
             onClick={onStart}
-            className="group relative w-full max-w-md py-8 bg-white text-black rounded-[24px] text-3xl font-[900] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.1)] hover:scale-[1.05] transition-all active:scale-95 overflow-hidden uppercase tracking-tight"
+            className="group relative w-full max-w-md py-8 bg-white text-black rounded-[28px] text-4xl font-[900] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15)] hover:scale-[1.03] transition-all active:scale-95 overflow-hidden uppercase tracking-tighter"
           >
-            <span className="relative z-10 flex items-center justify-center gap-5">POST REVIEW</span>
+            <span className="relative z-10">POST REVIEW</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
           </button>
 
           {faceIdEnabled && (
-            <>
-              <div className="flex items-center gap-6 w-full max-w-xs opacity-30">
-                <div className="h-px flex-1 bg-white"></div>
-                <span className="text-[10px] font-black text-white uppercase tracking-[0.4em]">OR</span>
-                <div className="h-px flex-1 bg-white"></div>
+            <div className="flex items-center gap-6 w-full max-w-md transition-all hover:bg-white/5 p-4 rounded-[32px] cursor-pointer" onClick={() => setShowSetup(true)}>
+              <div className="p-3 bg-white rounded-2xl shrink-0 shadow-lg">
+                <img key={qrTick} src={qrCodeUrl} alt="Scan" className="w-14 h-14 mix-blend-multiply" />
               </div>
-
-              <div className="group bg-white/5 backdrop-blur-md p-6 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-8 w-full max-w-md transition-all hover:bg-white/10">
-                <div className="p-4 bg-white rounded-2xl shrink-0">
-                  <img key={qrTick} src={qrCodeUrl} alt="Scan to Review" className="w-20 h-20 mix-blend-multiply" />
-                </div>
-                <div className="text-left">
-                  <h3 className="text-white font-black text-sm mb-1 uppercase tracking-widest">SKIP THE CROWD</h3>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-[120px]">Scan to review from your phone</p>
-                </div>
+              <div className="text-left">
+                <h3 className="text-white font-black text-xs mb-1 uppercase tracking-widest">SUBMIT VIA MOBILE</h3>
+                <p className="text-slate-500 text-[9px] font-bold uppercase tracking-tight max-w-[140px]">Scan to bypass the kiosk queue</p>
               </div>
-            </>
+              <div className="ml-auto w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/20">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Live Recent Feedback Ticker */}
+      {stats.recent.length > 0 && (
+        <div className="w-full max-w-4xl pt-8 border-t border-white/5 animate-fade-in">
+           <div className="flex items-center gap-4 mb-4 justify-center md:justify-start">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em]">Recent Activity</span>
+              <div className="h-px flex-1 bg-white/5 hidden md:block"></div>
+           </div>
+           <div className="overflow-hidden whitespace-nowrap relative group">
+              <div className="flex gap-12 animate-shimmer py-2">
+                 {/* Duplicate items for infinite scroll effect if few items */}
+                 {[...stats.recent, ...stats.recent].map((comment, i) => (
+                   <div key={i} className="inline-flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/5 backdrop-blur-md">
+                      <div className="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center text-[10px] font-black text-white">
+                        {comment.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="text-white font-black text-[10px] uppercase tracking-tighter mr-2">{comment.name}</span>
+                        <span className="text-slate-500 text-[10px] italic">"{comment.text.length > 40 ? comment.text.substring(0, 40) + '...' : comment.text}"</span>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-black to-transparent z-10"></div>
+              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black to-transparent z-10"></div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
