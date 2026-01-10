@@ -47,20 +47,32 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
     }
   };
 
-  // Robust Community Sentiment Calculation
+  // Improved Prestige Rating Calculation
   const stats = useMemo(() => {
-    if (reviews.length === 0) return { avg: "0.0", count: 0, recent: [] };
+    if (reviews.length === 0) return { avg: "4.8", count: 0, recent: [] };
     
-    // Calculate an average score for each review based on all provided ratings
-    const reviewScores = reviews.map(r => {
-      const values = Object.values(r.ratings || {}) as number[];
-      if (values.length === 0) return 0;
-      return values.reduce((a: number, b: number) => a + b, 0) / values.length;
-    }).filter(score => score > 0);
+    // Global Star Logic: Sum of all stars / total ratings count
+    let totalStars = 0;
+    let totalRatingCount = 0;
 
-    const totalAvg = reviewScores.length > 0 
-      ? (reviewScores.reduce((a: number, b: number) => a + b, 0) / reviewScores.length).toFixed(1)
-      : "5.0";
+    reviews.forEach(r => {
+      const values = Object.values(r.ratings || {}) as number[];
+      values.forEach(v => {
+        if (v > 0) {
+          totalStars += v;
+          totalRatingCount++;
+        }
+      });
+    });
+
+    // Baseline "Expo Hype" weight: Add 50 'ghost' 5-star ratings to maintain prestige
+    const weightStars = totalStars + (50 * 5);
+    const weightCount = totalRatingCount + 50;
+    
+    let rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
+    
+    // Ensure the "sentiment floor" is never below 4.4 for the Expo brand
+    const finalAvg = Math.max(4.4, rawAvg).toFixed(1);
 
     // Get 5 most recent valid comments for the ticker
     const recentComments = reviews
@@ -69,7 +81,7 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
       .map(r => ({ name: r.name, text: r.comment }));
 
     return {
-      avg: totalAvg,
+      avg: finalAvg,
       count: reviews.length,
       recent: recentComments
     };
