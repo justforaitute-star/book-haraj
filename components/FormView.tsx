@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { DetailedRatings, RatingCategory } from '../types.ts';
 
@@ -42,15 +43,8 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
     return initial;
   });
 
-  // Steps Structure:
-  // Step 0: Name
-  // Step 1/2...: Rating Categories
-  // Last Step: Comments
-
-  // totalSteps calculation: Name (1) + Categories (N) + Comments (1)
   const totalSteps = 1 + categories.length + 1; 
 
-  // Helper to get the actual index for rating categories based on currentStep
   const getCategoryIndex = (step: number) => {
     return step - 1;
   };
@@ -65,9 +59,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
   };
 
   const nextStep = () => {
-    // Validation
     if (currentStep === 0 && !name.trim()) return;
-
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -97,9 +89,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
     onSubmit({ name, ratings, comment: comment.trim() });
   };
 
-  // Determine what type of screen to show
   const renderStepContent = () => {
-    // 0: Name Screen
     if (currentStep === 0) {
       return (
         <div className="space-y-4 text-center animate-fade-in-up">
@@ -107,7 +97,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
           <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
             Your Name
           </h3>
-          <div className="relative max-w-xs mx-auto pt-4">
+          <div className="relative max-w-xs mx-auto pt-4 flex flex-col items-center gap-6">
             <input
               type="text"
               autoFocus
@@ -118,12 +108,19 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
               placeholder="TYPE HERE..."
               className={`w-full text-center ${isRemote ? 'text-xl py-2' : 'text-4xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black uppercase bg-transparent text-white`}
             />
+            {name.trim().length > 0 && (
+              <button 
+                onClick={nextStep}
+                className="px-10 py-4 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl animate-fade-in"
+              >
+                CONTINUE
+              </button>
+            )}
           </div>
         </div>
       );
     }
 
-    // N: Rating Category Screens
     const catIdx = getCategoryIndex(currentStep);
     if (catIdx >= 0 && catIdx < categories.length) {
       const category = categories[catIdx];
@@ -147,7 +144,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
                   key={star}
                   type="button"
                   onClick={() => handleRatingChange(category.id, star)}
-                  className={`${isRemote ? 'w-10 h-10' : 'w-20 h-20'} transition-all active:scale-90`}
+                  className={`${isRemote ? 'w-10 h-10' : 'w-20 h-20'} transition-all active:scale-90 flex flex-col items-center`}
                 >
                   <RoundedStar active={isActive} animating={isAnimating} sizeClass="w-full h-full" />
                 </button>
@@ -158,7 +155,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
       );
     }
 
-    // Last: Comments Screen
     if (currentStep === totalSteps - 1) {
       return (
         <div className="space-y-6 text-center animate-fade-in-up">
@@ -206,7 +202,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
           </svg>
         </button>
         <div className="flex flex-col items-center">
-          <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">{currentStep + 1} / {totalSteps}</span>
           <div className="flex gap-1 mt-1.5">
             {Array.from({ length: totalSteps }).map((_, i) => (
               <div key={i} className={`h-1 w-4 rounded-full transition-all duration-500 ${i <= currentStep ? 'bg-white' : 'bg-white/10'}`} />
@@ -234,19 +229,14 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
           BACK
         </button>
 
-        <button
-          onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
-          disabled={(currentStep === 0 && !name.trim())}
-          className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all ${
-            (currentStep === totalSteps - 1) || 
-            (getCategoryIndex(currentStep) >= 0 && getCategoryIndex(currentStep) < categories.length && (ratings[categories[getCategoryIndex(currentStep)].id] > 0)) || 
-            (currentStep === 0 && name.trim())
-            ? 'bg-white text-black' 
-            : 'bg-white/5 text-white/10'
-          }`}
-        >
-          {currentStep === totalSteps - 1 ? 'SUBMIT' : 'NEXT'}
-        </button>
+        {currentStep === totalSteps - 1 && (
+          <button
+            onClick={handleSubmit}
+            className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all bg-white text-black`}
+          >
+            SUBMIT
+          </button>
+        )}
       </div>
     </div>
   );
