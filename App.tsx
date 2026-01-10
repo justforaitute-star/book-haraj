@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { KioskStep, Review, DetailedRatings, AppConfig, RatingCategory } from './types.ts';
 import HomeView from './components/HomeView.tsx';
 import CameraView from './components/CameraView.tsx';
@@ -33,12 +33,6 @@ const PHOTOPRISM_API_KEY = getEnv('PHOTOPRISM_API_KEY') || '';
 
 const DEFAULT_CATEGORIES: RatingCategory[] = [
   { id: 'books', label: 'Book Availability', question: 'How was the selection?' },
-  { id: 'venue', label: 'Venue Arrangement', question: 'Layout of the venue?' },
-  { id: 'collection', label: 'Ease of Collection', question: 'Collection process?' },
-  { id: 'authors', label: 'Author Sessions', question: 'Enjoy the sessions?' },
-  { id: 'food', label: 'Food Stalls', question: 'Food & Refreshments?' },
-  { id: 'artibhition', label: 'Artibhition', question: 'The Artibhition program?' },
-  { id: 'coffee', label: 'Book a Coffee', question: 'Coffee experience?' },
   { id: 'overall', label: 'Overall Experience', question: 'Your final verdict?' },
 ];
 
@@ -89,7 +83,7 @@ const App: React.FC = () => {
         .from('reviews')
         .select('*')
         .order('timestamp', { ascending: false })
-        .limit(100);
+        .limit(200);
       if (fetchError) throw fetchError;
       if (data) setReviews(data as Review[]);
     } catch (err) {
@@ -155,7 +149,7 @@ const App: React.FC = () => {
     if (config.face_id_enabled) {
       setStep(KioskStep.CAMERA);
     } else {
-      setCurrentReview(prev => ({ ...prev, photo: undefined }));
+      setCurrentReview({ photo: undefined });
       setStep(KioskStep.FORM);
     }
   };
@@ -289,7 +283,7 @@ const App: React.FC = () => {
   return (
     <div className={`h-full w-full relative flex flex-col transition-colors duration-1000 ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
       {!isRemoteMode && step === KioskStep.HOME && (
-        <header className="pt-20 pb-4 w-full flex flex-col items-center shrink-0 pointer-events-none z-20">
+        <header className="pt-16 pb-2 w-full flex flex-col items-center shrink-0 pointer-events-none z-20">
           <div className="pointer-events-auto">
             <Logo3 logoUrl={config.logo_url} />
           </div>
@@ -306,7 +300,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && <HomeView onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
+            {step === KioskStep.HOME && <HomeView reviews={reviews} onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} faceIdEnabled={config.face_id_enabled} />}
