@@ -37,6 +37,7 @@ export interface Review {
   id: string;
   serial_number?: number;
   name: string;
+  email?: string;
   photo: string; // URL from Supabase Storage
   face_id?: string; // Unique facial signature for grouping
   ratings: DetailedRatings;

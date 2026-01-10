@@ -142,7 +142,6 @@ const App: React.FC = () => {
         }
       } else if (mode === 'remote') {
         setIsRemoteMode(true);
-        // Only set the step once the config is loaded to avoid jumping into the camera accidentally
         if (isConfigLoaded) {
           setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM);
         }
@@ -153,11 +152,9 @@ const App: React.FC = () => {
   }, [isConfigLoaded, config.face_id_enabled]);
 
   const handleStartReview = () => {
-    // Force evaluation of current config
     if (config.face_id_enabled) {
       setStep(KioskStep.CAMERA);
     } else {
-      // Clear any stale photo data just in case
       setCurrentReview(prev => ({ ...prev, photo: undefined }));
       setStep(KioskStep.FORM);
     }
@@ -224,7 +221,7 @@ const App: React.FC = () => {
     return publicUrl;
   };
 
-  const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
+  const handleFormSubmit = async (details: { name: string; email: string; ratings: DetailedRatings; comment: string }) => {
     if (!supabase || isSubmitting) return;
     setIsSubmitting(true);
     setSubmissionStatus('Initializing...');
@@ -238,6 +235,7 @@ const App: React.FC = () => {
 
       const newReview = {
         name: details.name,
+        email: details.email || null,
         photo: photoUrl,
         face_id: faceId || null,
         ratings: details.ratings,
@@ -252,7 +250,7 @@ const App: React.FC = () => {
         delete (fallbackReview as any).face_id;
         const { data: fbData, error: fbError } = await supabase.from('reviews').insert([fallbackReview]).select();
         if (fbError) throw fbError;
-        if (fbData) setCurrentReview({ ...fbData[0], face_id: faceId });
+        if (fbData) setCurrentReview(fbData[0]);
       } else if (data) {
         setCurrentReview(data[0]);
       }

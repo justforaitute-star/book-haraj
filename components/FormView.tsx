@@ -5,7 +5,7 @@ import { DetailedRatings, RatingCategory } from '../types.ts';
 interface FormViewProps {
   photo: string;
   categories: RatingCategory[];
-  onSubmit: (details: { name: string; ratings: DetailedRatings; comment: string }) => void;
+  onSubmit: (details: { name: string; email: string; ratings: DetailedRatings; comment: string }) => void;
   onCancel: () => void;
   isRemote?: boolean;
 }
@@ -34,6 +34,7 @@ const RoundedStar = ({ active, animating, sizeClass }: { active: boolean; animat
 const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCancel, isRemote = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   
@@ -43,7 +44,8 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
     return initial;
   });
 
-  const totalSteps = categories.length + 2; 
+  // Steps: 0: Name, 1: Email, 2..N+1: Ratings, N+2: Comments
+  const totalSteps = categories.length + 3; 
 
   const handleRatingChange = (categoryId: string, value: number) => {
     setRatings(prev => ({ ...prev, [categoryId]: value }));
@@ -82,7 +84,12 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
       setCurrentStep(0);
       return;
     }
-    onSubmit({ name, ratings, comment: comment.trim() });
+    onSubmit({ name, email: email.trim(), ratings, comment: comment.trim() });
+  };
+
+  const isValidEmail = (emailStr: string) => {
+    if (!emailStr) return true; // Optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
   };
 
   return (
@@ -134,18 +141,41 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
             </div>
           )}
 
-          {currentStep > 0 && currentStep <= categories.length && (
+          {currentStep === 1 && (
+            <div className="space-y-4 text-center animate-fade-in-up">
+              <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">STAY IN TOUCH</h2>
+              <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
+                Email Address
+              </h3>
+              <div className="relative max-w-xs mx-auto pt-4">
+                <input
+                  type="email"
+                  autoFocus
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && isValidEmail(email) && nextStep()}
+                  placeholder="OPTIONAL..."
+                  className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-3xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black bg-transparent text-white`}
+                />
+                {!isValidEmail(email) && email.length > 0 && (
+                  <p className="text-red-500 text-[9px] font-black uppercase mt-2 tracking-widest">Invalid Email Format</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {currentStep > 1 && currentStep <= (categories.length + 1) && (
             <div className="space-y-6 text-center animate-fade-in-up">
               <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">
-                {categories[currentStep - 1].label}
+                {categories[currentStep - 2].label}
               </h2>
               <h3 className={`${isRemote ? 'text-2xl' : 'text-4xl'} text-white font-black tracking-tight leading-tight max-w-xs mx-auto`}>
-                {categories[currentStep - 1].question}
+                {categories[currentStep - 2].question}
               </h3>
               
               <div className={`flex justify-center ${isRemote ? 'gap-2' : 'gap-6'} pt-4`}>
                 {[1, 2, 3, 4, 5].map((star) => {
-                  const category = categories[currentStep - 1];
+                  const category = categories[currentStep - 2];
                   const currentRating = ratings[category.id] || 0;
                   const isActive = star <= currentRating;
                   const isAnimating = animatingStar === star;
@@ -209,9 +239,9 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
 
         <button
           onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
-          disabled={currentStep === 0 && !name.trim()}
+          disabled={(currentStep === 0 && !name.trim()) || (currentStep === 1 && !isValidEmail(email))}
           className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all ${
-            (currentStep === totalSteps - 1) || (currentStep > 0 && currentStep <= categories.length && (ratings[categories[currentStep-1].id] > 0))
+            (currentStep === totalSteps - 1) || (currentStep > 1 && currentStep <= (categories.length + 1) && (ratings[categories[currentStep-2].id] > 0)) || (currentStep === 0 && name.trim()) || (currentStep === 1 && isValidEmail(email))
             ? 'bg-white text-black' 
             : 'bg-white/5 text-white/10'
           }`}

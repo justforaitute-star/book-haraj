@@ -49,6 +49,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         .from('reviews')
         .update({
           name: editingReview.name,
+          email: editingReview.email,
           comment: editingReview.comment,
           ratings: editingReview.ratings
         })
@@ -121,12 +122,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       alert("Global configuration applied successfully.");
       onUpdate();
     } catch (err: any) {
-      const msg = err?.message || "";
-      if (msg.includes("background_config") && (msg.includes("column") || msg.includes("cache"))) {
-        alert("SCHEMA ERROR: Your 'settings' table is missing new columns.\n\nPlease run this SQL in Supabase SQL Editor:\n\nALTER TABLE settings ADD COLUMN background_config jsonb;\nALTER TABLE settings ADD COLUMN face_id_enabled boolean DEFAULT true;");
-      } else {
-        alert(`Config Save Failed: ${msg}`);
-      }
+      alert(`Config Save Failed: ${err?.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -136,6 +132,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     const newCategories = [...localConfig.categories];
     newCategories[index] = { ...newCategories[index], [field]: value };
     setLocalConfig(prev => ({ ...prev, categories: newCategories }));
+  };
+
+  const removeCategory = (index: number) => {
+    if (localConfig.categories.length <= 1) {
+      alert("Station must have at least one question.");
+      return;
+    }
+    const newCategories = localConfig.categories.filter((_, i) => i !== index);
+    setLocalConfig(prev => ({ ...prev, categories: newCategories }));
+  };
+
+  const addCategory = () => {
+    const newId = `cat_${Date.now()}`;
+    const newCat: RatingCategory = {
+      id: newId,
+      label: 'New Category',
+      question: 'How was this part of the expo?'
+    };
+    setLocalConfig(prev => ({ ...prev, categories: [...prev.categories, newCat] }));
   };
 
   const updateBgConfig = (field: keyof BackgroundConfig, value: number) => {
@@ -208,6 +223,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <div className="flex-1 text-center md:text-left">
                     <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">SERIAL {foundReview.serial_number}</p>
                     <h4 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">{foundReview.name}</h4>
+                    {foundReview.email && <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">{foundReview.email}</p>}
                     <p className="text-white/60 text-lg leading-relaxed italic mb-10">"{foundReview.comment}"</p>
                     
                     <div className="flex gap-4">
@@ -259,7 +275,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
               </div>
             </div>
 
-            {/* AI CONFIG TOGGLE */}
             <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
               <div>
                 <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Recognition Engine</h3>
@@ -299,12 +314,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                         filter: `blur(${bgConfig.blur}px)`
                       }}
                    />
-                   
-                   <div className="absolute bottom-4 left-4 z-20">
-                      <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-                         <p className="text-[8px] font-black text-white uppercase tracking-widest">Live Monitor Preview</p>
-                      </div>
-                   </div>
                 </div>
                 
                 <div className="space-y-8">
@@ -320,7 +329,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                       className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
                     />
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
@@ -347,7 +355,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                       />
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Atmospheric Blur</label>
@@ -371,13 +378,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
               </h3>
               <div className="space-y-8">
                 {localConfig.categories.map((cat, idx) => (
-                  <div key={cat.id} className="p-8 bg-black/40 rounded-3xl border border-white/5 space-y-6">
+                  <div key={cat.id} className="p-8 bg-black/40 rounded-3xl border border-white/5 space-y-6 relative group/cat">
+                    <button 
+                      onClick={() => removeCategory(idx)}
+                      className="absolute top-6 right-6 w-8 h-8 bg-red-600/10 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/cat:opacity-100 transition-opacity border border-red-500/20"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                     <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">SLOT: {cat.id}</span>
+                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">QUESTION SLOT {idx + 1}</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Label</label>
+                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Category Label</label>
                         <input 
                           type="text" 
                           value={cat.label}
@@ -386,7 +401,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                         />
                       </div>
                       <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Question</label>
+                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Visitor Question</label>
                         <input 
                           type="text" 
                           value={cat.question}
@@ -397,6 +412,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                     </div>
                   </div>
                 ))}
+
+                <button 
+                  onClick={addCategory}
+                  className="w-full py-6 bg-white/5 border border-dashed border-white/20 rounded-3xl text-[10px] font-black text-white uppercase tracking-[0.4em] hover:bg-white/10 hover:border-white/40 transition-all flex items-center justify-center gap-3"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                  </svg>
+                  ADD NEW QUESTION
+                </button>
               </div>
             </div>
 
