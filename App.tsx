@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { KioskStep, Review, DetailedRatings, AppConfig, RatingCategory } from './types.ts';
 import HomeView from './components/HomeView.tsx';
@@ -54,8 +53,7 @@ const App: React.FC = () => {
     background_url: '',
     background_config: { zoom: 1, x: 0, y: 0, blur: 0 },
     categories: DEFAULT_CATEGORIES,
-    face_id_enabled: true,
-    email_enabled: true
+    face_id_enabled: true
   });
 
   const fetchConfig = useCallback(async () => {
@@ -68,8 +66,7 @@ const App: React.FC = () => {
           background_url: data.background_url || '',
           background_config: data.background_config || { zoom: 1, x: 0, y: 0, blur: 0 },
           categories: data.categories || DEFAULT_CATEGORIES,
-          face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true,
-          email_enabled: data.email_enabled !== undefined ? data.email_enabled : true
+          face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true
         });
       }
       setIsConfigLoaded(true);
@@ -217,7 +214,7 @@ const App: React.FC = () => {
     return publicUrl;
   };
 
-  const handleFormSubmit = async (details: { name: string; email: string; ratings: DetailedRatings; comment: string }) => {
+  const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
     if (!supabase || isSubmitting) return;
     setIsSubmitting(true);
     setSubmissionStatus('Initializing...');
@@ -231,7 +228,6 @@ const App: React.FC = () => {
 
       const newReview = {
         name: details.name,
-        email: details.email || null,
         photo: photoUrl,
         face_id: faceId || null,
         ratings: details.ratings,
@@ -304,7 +300,7 @@ const App: React.FC = () => {
           <>
             {step === KioskStep.HOME && <HomeView reviews={reviews} onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
-            {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} emailEnabled={config.email_enabled} />}
+            {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} faceIdEnabled={config.face_id_enabled} />}
           </>
         )}

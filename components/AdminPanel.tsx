@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Review, DetailedRatings, AppConfig, RatingCategory, BackgroundConfig } from '../types.ts';
 import { supabase } from '../lib/supabase.ts';
@@ -49,7 +48,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         .from('reviews')
         .update({
           name: editingReview.name,
-          email: editingReview.email,
           comment: editingReview.comment,
           ratings: editingReview.ratings
         })
@@ -115,8 +113,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         background_url: localConfig.background_url,
         background_config: localConfig.background_config,
         categories: localConfig.categories,
-        face_id_enabled: localConfig.face_id_enabled,
-        email_enabled: localConfig.email_enabled
+        face_id_enabled: localConfig.face_id_enabled
       });
       
       if (error) throw error;
@@ -166,10 +163,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
 
   const toggleFaceId = () => {
     setLocalConfig(prev => ({ ...prev, face_id_enabled: !prev.face_id_enabled }));
-  };
-
-  const toggleEmail = () => {
-    setLocalConfig(prev => ({ ...prev, email_enabled: !prev.email_enabled }));
   };
 
   const bgConfig = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
@@ -228,7 +221,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <div className="flex-1 text-center md:text-left">
                     <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">SERIAL {foundReview.serial_number}</p>
                     <h4 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">{foundReview.name}</h4>
-                    {foundReview.email && <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">{foundReview.email}</p>}
                     <p className="text-white/60 text-lg leading-relaxed italic mb-10">"{foundReview.comment}"</p>
                     
                     <div className="flex gap-4">
@@ -291,19 +283,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.face_id_enabled ? 'bg-white' : 'bg-white/10'}`}
                 >
                   <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.face_id_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
-                </button>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
-                <div>
-                  <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Email Collection</h3>
-                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Ask for visitor email addresses</p>
-                </div>
-                <button 
-                  onClick={toggleEmail}
-                  className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.email_enabled ? 'bg-white' : 'bg-white/10'}`}
-                >
-                  <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.email_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
                 </button>
               </div>
             </div>

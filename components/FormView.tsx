@@ -1,14 +1,12 @@
-
 import React, { useState, useMemo } from 'react';
 import { DetailedRatings, RatingCategory } from '../types.ts';
 
 interface FormViewProps {
   photo: string;
   categories: RatingCategory[];
-  onSubmit: (details: { name: string; email: string; ratings: DetailedRatings; comment: string }) => void;
+  onSubmit: (details: { name: string; ratings: DetailedRatings; comment: string }) => void;
   onCancel: () => void;
   isRemote?: boolean;
-  emailEnabled?: boolean;
 }
 
 const COMMENT_SUGGESTIONS = [
@@ -32,10 +30,9 @@ const RoundedStar = ({ active, animating, sizeClass }: { active: boolean; animat
   </svg>
 );
 
-const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCancel, isRemote = false, emailEnabled = true }) => {
+const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCancel, isRemote = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [comment, setComment] = useState('');
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   
@@ -47,16 +44,15 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
 
   // Steps Structure:
   // Step 0: Name
-  // Step 1: Email (If enabled)
   // Step 1/2...: Rating Categories
   // Last Step: Comments
 
-  // totalSteps calculation: Name (1) + Email (1 if enabled) + Categories (N) + Comments (1)
-  const totalSteps = 1 + (emailEnabled ? 1 : 0) + categories.length + 1; 
+  // totalSteps calculation: Name (1) + Categories (N) + Comments (1)
+  const totalSteps = 1 + categories.length + 1; 
 
   // Helper to get the actual index for rating categories based on currentStep
   const getCategoryIndex = (step: number) => {
-    return emailEnabled ? step - 2 : step - 1;
+    return step - 1;
   };
 
   const handleRatingChange = (categoryId: string, value: number) => {
@@ -71,7 +67,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
   const nextStep = () => {
     // Validation
     if (currentStep === 0 && !name.trim()) return;
-    if (emailEnabled && currentStep === 1 && email.length > 0 && !isValidEmail(email)) return;
 
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
@@ -99,12 +94,7 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
       setCurrentStep(0);
       return;
     }
-    onSubmit({ name, email: email.trim(), ratings, comment: comment.trim() });
-  };
-
-  const isValidEmail = (emailStr: string) => {
-    if (!emailStr) return true; // Optional
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+    onSubmit({ name, ratings, comment: comment.trim() });
   };
 
   // Determine what type of screen to show
@@ -128,32 +118,6 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
               placeholder="TYPE HERE..."
               className={`w-full text-center ${isRemote ? 'text-xl py-2' : 'text-4xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black uppercase bg-transparent text-white`}
             />
-          </div>
-        </div>
-      );
-    }
-
-    // 1: Email Screen (Optional based on toggle)
-    if (emailEnabled && currentStep === 1) {
-      return (
-        <div className="space-y-4 text-center animate-fade-in-up">
-          <h2 className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">STAY IN TOUCH</h2>
-          <h3 className={`${isRemote ? 'text-2xl' : 'text-5xl'} text-white font-black tracking-tight leading-none`}>
-            Email Address
-          </h3>
-          <div className="relative max-w-xs mx-auto pt-4">
-            <input
-              type="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && isValidEmail(email) && nextStep()}
-              placeholder="OPTIONAL..."
-              className={`w-full text-center ${isRemote ? 'text-lg py-2' : 'text-3xl py-4'} border-b border-white/10 focus:border-white outline-none transition-all placeholder:text-white/10 font-black bg-transparent text-white`}
-            />
-            {!isValidEmail(email) && email.length > 0 && (
-              <p className="text-red-500 text-[9px] font-black uppercase mt-2 tracking-widest">Invalid Email Format</p>
-            )}
           </div>
         </div>
       );
@@ -272,12 +236,11 @@ const FormView: React.FC<FormViewProps> = ({ photo, categories, onSubmit, onCanc
 
         <button
           onClick={() => currentStep === totalSteps - 1 ? handleSubmit() : nextStep()}
-          disabled={(currentStep === 0 && !name.trim()) || (emailEnabled && currentStep === 1 && email.length > 0 && !isValidEmail(email))}
+          disabled={(currentStep === 0 && !name.trim())}
           className={`flex-1 ${isRemote ? 'py-4' : 'py-6'} rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all ${
             (currentStep === totalSteps - 1) || 
             (getCategoryIndex(currentStep) >= 0 && getCategoryIndex(currentStep) < categories.length && (ratings[categories[getCategoryIndex(currentStep)].id] > 0)) || 
-            (currentStep === 0 && name.trim()) || 
-            (emailEnabled && currentStep === 1 && isValidEmail(email))
+            (currentStep === 0 && name.trim())
             ? 'bg-white text-black' 
             : 'bg-white/5 text-white/10'
           }`}

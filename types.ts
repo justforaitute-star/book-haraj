@@ -1,4 +1,3 @@
-
 export enum KioskStep {
   HOME = 'HOME',
   CAMERA = 'CAMERA',
@@ -27,7 +26,6 @@ export interface AppConfig {
   background_config?: BackgroundConfig;
   categories: RatingCategory[];
   face_id_enabled?: boolean;
-  email_enabled?: boolean;
 }
 
 export interface DetailedRatings {
@@ -38,7 +36,6 @@ export interface Review {
   id: string;
   serial_number?: number;
   name: string;
-  email?: string;
   photo: string; // URL from Supabase Storage
   face_id?: string; // Unique facial signature for grouping
   ratings: DetailedRatings;
