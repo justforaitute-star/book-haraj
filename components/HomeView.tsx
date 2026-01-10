@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 import { Review } from '../types.ts';
 
@@ -14,6 +15,37 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
   const [showSetup, setShowSetup] = useState(false);
   const [qrTick, setQrTick] = useState(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Sync fullscreen state with browser events
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const doc = document.documentElement as any;
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      if (doc.requestFullscreen) {
+        doc.requestFullscreen().catch(() => {});
+      } else if (doc.webkitRequestFullscreen) {
+        doc.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+    }
+  };
 
   // Robust Community Sentiment Calculation
   const stats = useMemo(() => {
@@ -21,15 +53,12 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
     
     // Calculate an average score for each review based on all provided ratings
     const reviewScores = reviews.map(r => {
-      // FIX: Cast Object.values to number[] to avoid 'unknown' type issues in arithmetic operations
       const values = Object.values(r.ratings || {}) as number[];
       if (values.length === 0) return 0;
-      // FIX: Add explicit type annotations to reduce callback to prevent arithmetic operation errors on 'unknown' types
       return values.reduce((a: number, b: number) => a + b, 0) / values.length;
     }).filter(score => score > 0);
 
     const totalAvg = reviewScores.length > 0 
-      // FIX: Add explicit type annotations to reduce callback
       ? (reviewScores.reduce((a: number, b: number) => a + b, 0) / reviewScores.length).toFixed(1)
       : "5.0";
 
@@ -76,17 +105,40 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
       {/* Top Action Bar */}
       <div className="absolute top-8 right-8 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
         <div className="flex gap-3">
-          <button onClick={handleRefresh} className={`w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 transition-all border border-white/20 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin' : ''}`}>
+          <button 
+            onClick={toggleFullscreen} 
+            className="w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 transition-all border border-white/20 shadow-2xl active:scale-90"
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {isFullscreen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              )}
+            </svg>
+          </button>
+          
+          <button 
+            onClick={handleRefresh} 
+            className={`w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 transition-all border border-white/20 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin' : ''}`}
+            title="Refresh Feed"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
-          <button onClick={() => setShowSetup(!showSetup)} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl border border-white/20 active:scale-90 ${showSetup ? 'bg-white text-black' : 'bg-white/10 text-slate-300'}`}>
+
+          <button 
+            onClick={() => setShowSetup(!showSetup)} 
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl border border-white/20 active:scale-90 ${showSetup ? 'bg-white text-black' : 'bg-white/10 text-slate-300'}`}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
+        
         {showSetup && (
           <div className="bg-slate-900/95 backdrop-blur-3xl p-6 rounded-[32px] shadow-2xl border border-white/10 mt-2 w-64 text-left animate-fade-in-up origin-top-right">
             <button onClick={() => { onToggleMode(); setShowSetup(false); }} className="w-full py-4 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2">Launch Feed</button>
