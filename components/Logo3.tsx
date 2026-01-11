@@ -30,7 +30,7 @@ const Logo3: React.FC<{ className?: string; logoUrl?: string }> = ({ className =
         ) : (
           <div className="flex flex-col items-center">
             <div className="text-white font-black text-4xl sm:text-7xl italic tracking-tighter uppercase drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] leading-none">
-              BOOK HARAJ <span className="text-yellow-500">3.0</span>
+              REVIEW <span className="text-yellow-500">APP</span>
             </div>
             <div className="mt-2 h-1 w-24 bg-white/20 rounded-full overflow-hidden">
                <div className="h-full bg-white animate-loading-bar origin-left"></div>

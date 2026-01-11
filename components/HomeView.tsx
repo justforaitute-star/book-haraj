@@ -317,6 +317,11 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
            </div>
         </div>
       )}
+
+      {/* Footer Branding */}
+      <footer className="mt-8 opacity-20">
+        <p className="text-[10px] font-black text-white uppercase tracking-[0.5em]">SOUVENIR EXPERIENCE • REVIEW APP</p>
+      </footer>
     </div>
   );
 };

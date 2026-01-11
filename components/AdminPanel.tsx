@@ -476,7 +476,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       </div>
 
       <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl opacity-20 shrink-0">
-        <p className="text-[10px] font-black text-white uppercase tracking-[1.5em]">HARAJ MANAGEMENT V4.1</p>
+        <p className="text-[10px] font-black text-white uppercase tracking-[1.5em]">REVIEW APP MANAGEMENT</p>
       </footer>
     </div>
   );

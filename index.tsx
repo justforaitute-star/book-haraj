@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 
-console.log("Book Haraj Kiosk: Bootstrapping index.tsx...");
+console.log("Review App Kiosk: Bootstrapping index.tsx...");
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

@@ -159,7 +159,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) =>
       </main>
 
       <footer className="relative z-10 px-8 py-8 border-t border-white/5 bg-black/80 backdrop-blur-xl flex justify-center">
-         <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.4em]">SOUVENIR EXPERIENCE • BOOK HARAJ 3.0</p>
+         <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.4em]">SOUVENIR EXPERIENCE • REVIEW APP</p>
       </footer>
     </div>
   );

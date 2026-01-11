@@ -1,6 +1,6 @@
 {
-  "name": "Book Haraj Review Kiosk",
-  "description": "A premium, kiosk-style application for Book Haraj expo visitors to leave reviews with photos, ratings, and feedback.",
+  "name": "Review App",
+  "description": "A premium, kiosk-style application for expo visitors to leave reviews with photos, ratings, and feedback.",
   "requestFramePermissions": [
     "camera"
   ]
