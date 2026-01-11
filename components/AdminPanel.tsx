@@ -30,6 +30,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       root.style.setProperty('--bg-x', `${bg.x}%`);
       root.style.setProperty('--bg-y', `${bg.y}%`);
       root.style.setProperty('--bg-blur', `${bg.blur}px`);
+    } else if (activeTab === 'CONFIG') {
+      const root = document.documentElement;
+      root.style.setProperty('--bg-image', 'none');
     }
   }, [localConfig.background_config, localConfig.background_url, activeTab]);
 
@@ -102,6 +105,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleDeleteAsset = (type: 'logo' | 'bg') => {
+    if (!confirm(`Are you sure you want to remove the station ${type === 'logo' ? 'logo' : 'backdrop'}?`)) return;
+    
+    setLocalConfig(prev => ({ 
+      ...prev, 
+      [type === 'logo' ? 'logo_url' : 'background_url']: '' 
+    }));
+    
+    if (type === 'bg') setShowPlacementEditor(false);
+    alert(`${type.toUpperCase()} marked for removal. Click 'COMMIT GLOBAL CONFIG' to apply changes.`);
   };
 
   const handleSaveConfig = async () => {
@@ -262,7 +277,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                    )}
                 </div>
                 <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} ref={logoInputRef} className="hidden" />
-                <button onClick={() => logoInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
+                <div className="flex flex-col w-full gap-2">
+                  <button onClick={() => logoInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
+                  {localConfig.logo_url && (
+                    <button onClick={() => handleDeleteAsset('logo')} className="w-full py-4 bg-red-500/10 text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">REMOVE LOGO</button>
+                  )}
+                </div>
               </div>
 
               <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
@@ -278,12 +298,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bg')} ref={bgInputRef} className="hidden" />
                   <button onClick={() => bgInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD NEW</button>
                   {localConfig.background_url && (
-                    <button 
-                      onClick={() => setShowPlacementEditor(!showPlacementEditor)} 
-                      className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${showPlacementEditor ? 'bg-white text-black border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}
-                    >
-                      {showPlacementEditor ? 'CLOSE PLACEMENT' : 'EDIT PLACEMENT'}
-                    </button>
+                    <>
+                      <button 
+                        onClick={() => setShowPlacementEditor(!showPlacementEditor)} 
+                        className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${showPlacementEditor ? 'bg-white text-black border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}
+                      >
+                        {showPlacementEditor ? 'CLOSE PLACEMENT' : 'EDIT PLACEMENT'}
+                      </button>
+                      <button onClick={() => handleDeleteAsset('bg')} className="w-full py-4 bg-red-500/10 text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">REMOVE BACKDROP</button>
+                    </>
                   )}
                 </div>
               </div>
