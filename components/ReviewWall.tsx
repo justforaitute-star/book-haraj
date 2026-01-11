@@ -1,21 +1,34 @@
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { Review } from '../types.ts';
+import { Review, RatingCategory } from '../types.ts';
 
 interface ReviewWallProps {
   reviews: Review[];
+  categories?: RatingCategory[];
   fullScreen?: boolean;
   singleReviewId?: string | null;
   onExit?: () => void;
   onRefresh?: () => void;
 }
 
-const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, singleReviewId = null, onExit, onRefresh }) => {
+const ReviewWall: React.FC<ReviewWallProps> = ({ 
+  reviews, 
+  categories = [], 
+  fullScreen = false, 
+  singleReviewId = null, 
+  onExit, 
+  onRefresh 
+}) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number | null>(null);
   const scrollPosRef = useRef(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Pause state to allow manual scrolling
+  const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
+  const isAutoScrollPausedRef = useRef(false);
+  const pauseTimeoutRef = useRef<number | null>(null);
 
   const handleRefresh = async () => {
     if (isRefreshing || !onRefresh) return;
@@ -35,19 +48,32 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
     }
   };
 
+  const handleManualScrollInteraction = () => {
+    isAutoScrollPausedRef.current = true;
+    setIsAutoScrollPaused(true);
+    
+    if (pauseTimeoutRef.current) window.clearTimeout(pauseTimeoutRef.current);
+    
+    pauseTimeoutRef.current = window.setTimeout(() => {
+      isAutoScrollPausedRef.current = false;
+      setIsAutoScrollPaused(false);
+      // Sync our logical position with where the user scrolled to
+      if (scrollContainerRef.current) {
+        scrollPosRef.current = scrollContainerRef.current.scrollTop;
+      }
+    }, 5000); // 5 second pause before resuming auto-scroll
+  };
+
   useEffect(() => {
     const handleFsChange = () => setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // Sync Global Rating Calculation with HomeView
   const averageRating = useMemo(() => {
     if (reviews.length === 0) return "4.8";
-    
     let totalStars = 0;
     let totalRatingCount = 0;
-
     reviews.forEach(r => {
       const values = Object.values(r.ratings || {}) as number[];
       values.forEach(v => {
@@ -57,11 +83,9 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
         }
       });
     });
-
     const weightStars = totalStars + (50 * 5);
     const weightCount = totalRatingCount + 50;
     let rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
-    
     return Math.max(4.4, rawAvg).toFixed(1);
   }, [reviews]);
 
@@ -75,14 +99,23 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
     if (!fullScreen || displayReviews.length < 3 || singleReviewId) return;
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
+    
     const animate = () => {
-      scrollPosRef.current += 0.45;
-      if (scrollPosRef.current >= scrollContainer.scrollHeight - scrollContainer.clientHeight) scrollPosRef.current = 0;
-      scrollContainer.scrollTop = scrollPosRef.current;
+      if (!isAutoScrollPausedRef.current) {
+        scrollPosRef.current += 0.45;
+        if (scrollPosRef.current >= scrollContainer.scrollHeight - scrollContainer.clientHeight) {
+          scrollPosRef.current = 0;
+        }
+        scrollContainer.scrollTop = scrollPosRef.current;
+      }
       requestRef.current = requestAnimationFrame(animate);
     };
+    
     requestRef.current = requestAnimationFrame(animate);
-    return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
+    return () => { 
+      if (requestRef.current) cancelAnimationFrame(requestRef.current); 
+      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    };
   }, [fullScreen, displayReviews.length, singleReviewId]);
 
   return (
@@ -100,8 +133,10 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
                 {singleReviewId ? 'YOUR' : 'THE'} <span className="text-white">{singleReviewId ? 'REVIEW' : 'FEED'}</span>
               </h1>
               <div className="flex items-center gap-2 mt-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">EXPO TESTIMONIALS</p>
+                 <div className={`w-1.5 h-1.5 rounded-full ${isAutoScrollPaused ? 'bg-yellow-500' : 'bg-white animate-pulse'}`}></div>
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">
+                   {isAutoScrollPaused ? 'USER CONTROL ACTIVE' : 'EXPO TESTIMONIALS'}
+                 </p>
               </div>
             </div>
           </div>
@@ -140,12 +175,16 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
         </div>
       )}
 
-      <div ref={scrollContainerRef} className={`w-full flex-1 overflow-y-auto no-scrollbar z-10 pt-8 md:pt-12 px-6 md:px-10 ${singleReviewId ? 'flex items-center justify-center' : ''}`}>
+      <div 
+        ref={scrollContainerRef} 
+        onWheel={handleManualScrollInteraction}
+        onTouchStart={handleManualScrollInteraction}
+        onMouseDown={handleManualScrollInteraction}
+        className={`w-full flex-1 overflow-y-auto no-scrollbar z-10 pt-8 md:pt-12 px-6 md:px-10 ${singleReviewId ? 'flex items-center justify-center' : ''}`}
+      >
         {displayReviews.length > 0 ? (
           <div className={`${singleReviewId ? 'max-w-md w-full' : 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 md:gap-8 max-w-[1800px]'} mx-auto pb-96`}>
             {displayReviews.map((review, index) => {
-              const rValues = Object.values(review.ratings || {}) as number[];
-              const cardRating = rValues.length > 0 ? Math.round(rValues.reduce((a, b) => a + b, 0) / rValues.length) : 5;
               const serialNum = review.serial_number ? `#${String(review.serial_number).padStart(3, '0')}` : `#${index + 1}`;
 
               return (
@@ -154,13 +193,30 @@ const ReviewWall: React.FC<ReviewWallProps> = ({ reviews, fullScreen = false, si
                   <div className="absolute top-8 right-8 px-3 py-1 bg-white/10 border border-white/10 rounded-lg backdrop-blur-xl">
                     <span className="text-[10px] font-black text-white/80 tracking-widest">{serialNum}</span>
                   </div>
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex gap-1 text-yellow-400">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={`text-base md:text-lg ${i < cardRating ? 'opacity-100' : 'opacity-20 text-white'}`}>★</span>
-                      ))}
-                    </div>
+                  
+                  {/* Detailed Ratings Breakdown inside the card */}
+                  <div className="mb-8 space-y-1.5 pt-4">
+                    {categories.length > 0 ? categories.map(cat => {
+                      const starValue = review.ratings?.[cat.id] || 0;
+                      return (
+                        <div key={cat.id} className="flex justify-between items-center gap-4">
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none truncate max-w-[100px]">{cat.label}</span>
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} className={`text-[10px] ${i < starValue ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                       <div className="flex gap-1 text-yellow-400">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i} className="text-lg">★</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
                   <div className="relative">
                     <svg className="absolute -top-4 -left-4 h-10 w-10 text-white opacity-[0.05]" fill="currentColor" viewBox="0 0 32 32">
                       <path d="M10 8c-3.3 0-6 2.7-6 6v10h10V14H7c0-1.7 1.3-3 3-3V8zm14 0c-3.3 0-6 2.7-6 6v10h10V14h-7c0-1.7 1.3-3 3-3V8z" />

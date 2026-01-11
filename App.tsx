@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { KioskStep, Review, DetailedRatings, AppConfig, RatingCategory } from './types.ts';
 import HomeView from './components/HomeView.tsx';
@@ -275,7 +276,7 @@ const App: React.FC = () => {
   }
 
   if (isDisplayMode) {
-    return <ReviewWall reviews={reviews} fullScreen onExit={() => setIsDisplayMode(false)} onRefresh={handleManualRefresh} />;
+    return <ReviewWall reviews={reviews} categories={config.categories} fullScreen onExit={() => setIsDisplayMode(false)} onRefresh={handleManualRefresh} />;
   }
 
   return (
@@ -298,7 +299,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && <HomeView reviews={reviews} onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
+            {step === KioskStep.HOME && <HomeView reviews={reviews} categories={config.categories} onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
             {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
             {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} faceIdEnabled={config.face_id_enabled} />}

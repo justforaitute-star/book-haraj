@@ -1,9 +1,10 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Review } from '../types.ts';
+import { Review, RatingCategory } from '../types.ts';
 
 interface HomeViewProps {
   reviews: Review[];
+  categories: RatingCategory[];
   onStart: () => void;
   onToggleMode: () => void;
   onAdmin: () => void;
@@ -11,8 +12,9 @@ interface HomeViewProps {
   faceIdEnabled?: boolean;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onAdmin, onRefresh, faceIdEnabled = true }) => {
+const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onToggleMode, onAdmin, onRefresh, faceIdEnabled = true }) => {
   const [showSetup, setShowSetup] = useState(false);
+  const [showOverallStats, setShowOverallStats] = useState(false);
   const [qrTick, setQrTick] = useState(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -49,18 +51,22 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
 
   // Improved Prestige Rating Calculation
   const stats = useMemo(() => {
-    if (reviews.length === 0) return { avg: "4.8", count: 0, recent: [] };
+    if (reviews.length === 0) return { avg: "4.8", count: 0, recent: [], categoryAverages: {} };
     
     // Global Star Logic: Sum of all stars / total ratings count
     let totalStars = 0;
     let totalRatingCount = 0;
+    const catSums: Record<string, number> = {};
+    const catCounts: Record<string, number> = {};
 
     reviews.forEach(r => {
-      const values = Object.values(r.ratings || {}) as number[];
-      values.forEach(v => {
-        if (v > 0) {
-          totalStars += v;
+      categories.forEach(cat => {
+        const val = r.ratings?.[cat.id] || 0;
+        if (val > 0) {
+          totalStars += val;
           totalRatingCount++;
+          catSums[cat.id] = (catSums[cat.id] || 0) + val;
+          catCounts[cat.id] = (catCounts[cat.id] || 0) + 1;
         }
       });
     });
@@ -70,9 +76,18 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
     const weightCount = totalRatingCount + 50;
     
     let rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
-    
-    // Ensure the "sentiment floor" is never below 4.4 for the Expo brand
     const finalAvg = Math.max(4.4, rawAvg).toFixed(1);
+
+    // Calculate per-category averages for the "Overall" tab
+    const categoryAverages: Record<string, string> = {};
+    categories.forEach(cat => {
+      const sum = catSums[cat.id] || 0;
+      const count = catCounts[cat.id] || 0;
+      // Also apply slight hype weight to individual categories for consistency
+      const wSum = sum + (5 * 5);
+      const wCount = count + 5;
+      categoryAverages[cat.id] = (wSum / wCount).toFixed(1);
+    });
 
     // Get 5 most recent valid comments for the ticker
     const recentComments = reviews
@@ -83,9 +98,10 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
     return {
       avg: finalAvg,
       count: reviews.length,
-      recent: recentComments
+      recent: recentComments,
+      categoryAverages
     };
-  }, [reviews]);
+  }, [reviews, categories]);
 
   useEffect(() => {
     const interval = setInterval(() => setQrTick(Date.now()), 20000);
@@ -153,11 +169,61 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, onStart, onToggleMode, onA
         
         {showSetup && (
           <div className="bg-slate-900/95 backdrop-blur-3xl p-6 rounded-[32px] shadow-2xl border border-white/10 mt-2 w-64 text-left animate-fade-in-up origin-top-right">
-            <button onClick={() => { onToggleMode(); setShowSetup(false); }} className="w-full py-4 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2">Launch Feed</button>
-            <button onClick={() => { onAdmin(); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10">Admin Panel</button>
+            <button onClick={() => { onToggleMode(); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2 border border-white/10 hover:bg-white hover:text-black transition-all">Launch Feed</button>
+            <button onClick={() => { setShowOverallStats(true); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2 border border-white/10 hover:bg-white hover:text-black transition-all">Overall Stats</button>
+            <button onClick={() => { onAdmin(); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">Admin Panel</button>
           </div>
         )}
       </div>
+
+      {/* Overall Stats Modal */}
+      {showOverallStats && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-fade-in">
+           <div className="bg-slate-900 border border-white/10 p-10 rounded-[48px] w-full max-w-md shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-fade-in-up">
+              <div className="flex items-center justify-between mb-8">
+                <div className="text-left">
+                  <h3 className="text-2xl font-black italic tracking-tighter uppercase text-white">Question Matrix</h3>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Breakdown by Segment</p>
+                </div>
+                <button onClick={() => setShowOverallStats(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white/40 border border-white/10">
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                   </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {categories.map(cat => (
+                  <div key={cat.id} className="bg-white/5 p-6 rounded-3xl border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all">
+                    <div>
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-1">{cat.label}</p>
+                      <p className="text-xs font-bold text-white/80 leading-tight pr-4">{cat.question}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <span className="text-2xl font-black text-white">{stats.categoryAverages[cat.id] || "4.8"}</span>
+                        <span className="text-yellow-500 text-xl">★</span>
+                      </div>
+                      <div className="w-12 h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-yellow-500 rounded-full" 
+                          style={{ width: `${(parseFloat(stats.categoryAverages[cat.id] || "4.8") / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setShowOverallStats(false)}
+                className="w-full py-5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] mt-10 active:scale-95 transition-all shadow-2xl"
+              >
+                CLOSE OVERVIEW
+              </button>
+           </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full max-w-2xl">
         {/* Main Sentiment Dashboard */}
