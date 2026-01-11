@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Review, DetailedRatings, AppConfig, RatingCategory, BackgroundConfig } from '../types.ts';
 import { supabase } from '../lib/supabase.ts';
@@ -220,8 +221,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
                   <img src={foundReview.photo} className="w-48 h-60 object-cover rounded-3xl border border-white/10 shadow-2xl" />
                   <div className="flex-1 text-center md:text-left">
                     <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">SERIAL {foundReview.serial_number}</p>
-                    <h4 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">{foundReview.name}</h4>
-                    <p className="text-white/60 text-lg leading-relaxed italic mb-10">"{foundReview.comment}"</p>
+                    <h4 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">{foundReview.name}</h4>
+                    
+                    {/* Detailed Ratings Breakdown */}
+                    <div className="mb-8 space-y-2 bg-black/20 p-6 rounded-3xl border border-white/5">
+                      <h5 className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-3">Rating Breakdown</h5>
+                      {localConfig.categories.map(cat => (
+                        <div key={cat.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{cat.label}</span>
+                          <div className="flex gap-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} className={`text-xs ${i < (foundReview.ratings?.[cat.id] || 0) ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-white/60 text-lg leading-relaxed italic mb-10">"{foundReview.comment || 'No comment provided.'}"</p>
                     
                     <div className="flex gap-4">
                       <button onClick={() => handleEdit(foundReview)} className="flex-1 py-5 bg-white text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-all shadow-xl">EDIT</button>
