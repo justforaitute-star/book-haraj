@@ -68,7 +68,7 @@ const ReviewWall: React.FC<ReviewWallProps> = ({
   }, []);
 
   const averageRating = useMemo(() => {
-    if (reviews.length === 0) return "4.8";
+    if (reviews.length === 0) return "0.0";
     let totalStars = 0;
     let totalRatingCount = 0;
     reviews.forEach(r => {
@@ -80,10 +80,7 @@ const ReviewWall: React.FC<ReviewWallProps> = ({
         }
       });
     });
-    const weightStars = totalStars + (50 * 5);
-    const weightCount = totalRatingCount + 50;
-    const rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
-    return Math.max(4.4, rawAvg).toFixed(1);
+    return totalRatingCount > 0 ? (totalStars / totalRatingCount).toFixed(1) : "0.0";
   }, [reviews]);
 
   const displayReviews = useMemo(() => {
@@ -116,7 +113,7 @@ const ReviewWall: React.FC<ReviewWallProps> = ({
   }, [fullScreen, displayReviews.length, singleReviewId]);
 
   return (
-    <div className={`relative flex flex-col items-center w-full h-full overflow-hidden text-[#2b241e] ${fullScreen ? 'p-0' : 'p-4'}`}>
+    <div className={`relative flex flex-col items-center w-full text-[#2b241e] ${fullScreen ? 'h-screen overflow-hidden p-0' : 'min-h-screen p-4'}`}>
       {fullScreen && (
         <div className="liquid-glass-bar relative z-30 w-full py-4 px-5 md:px-10 animate-fade-in flex-shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-4 min-w-0">

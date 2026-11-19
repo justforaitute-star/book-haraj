@@ -25,7 +25,7 @@ const AlreadyReviewedView: React.FC<AlreadyReviewedViewProps> = ({
     Object.values(submittedReview.ratings).some((val) => Number(val) > 0);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-between px-6 py-8 overflow-y-auto no-scrollbar animate-fade-in text-[#2b241e]">
+    <div className="min-h-screen w-full flex flex-col items-center justify-between px-6 py-8 animate-fade-in text-[#2b241e]">
       <div className="pt-2 shrink-0 scale-75">
         <Logo3 logoUrl={logoUrl} />
       </div>

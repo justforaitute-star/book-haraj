@@ -1,9 +1,12 @@
 import { DetailedRatings, Review } from '../types.ts';
 
-const DEVICE_ID_KEY = 'bookharaj_device_id';
-const SUBMITTED_REVIEW_KEY = 'bookharaj_submitted_review';
-const SUBMITTED_FLAG_COOKIE = 'bookharaj_reviewed';
-const DEVICE_COOKIE = 'bookharaj_device_id';
+const DEVICE_ID_KEY = 'edex_iisj_device_id';
+const SUBMITTED_REVIEW_KEY = 'edex_iisj_submitted_review';
+const SUBMITTED_FLAG_COOKIE = 'edex_iisj_reviewed';
+const DEVICE_COOKIE = 'edex_iisj_device_id';
+const VISIT_COUNT_KEY = 'edex_iisj_visit_count';
+const ADMIN_PIN_KEY = 'edex_iisj_admin_pin';
+const DEFAULT_ADMIN_PIN = '1969';
 
 export interface SubmittedPhoneReview {
   id?: string;
@@ -28,6 +31,15 @@ const setCookie = (name: string, value: string, maxAgeSeconds = 60 * 60 * 24 * 3
     document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; path=/; SameSite=Lax`;
   } catch {
     // Ignore cookie errors in restricted contexts
+  }
+};
+
+const clearCookie = (name: string) => {
+  if (typeof document === 'undefined') return;
+  try {
+    document.cookie = `${name}=; max-age=0; path=/; SameSite=Lax`;
+  } catch {
+    // Ignore cookie errors
   }
 };
 
@@ -110,6 +122,15 @@ export const markPhoneAsReviewed = (review: Partial<Review> & { device_id: strin
   return record;
 };
 
+export const clearSubmittedPhoneReview = () => {
+  try {
+    localStorage.removeItem(SUBMITTED_REVIEW_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+  clearCookie(SUBMITTED_FLAG_COOKIE);
+};
+
 export const syncSubmittedReviewFromServer = (
   reviews: Review[],
   deviceId: string
@@ -117,4 +138,53 @@ export const syncSubmittedReviewFromServer = (
   const match = reviews.find((r) => r.device_id && r.device_id === deviceId);
   if (!match) return null;
   return markPhoneAsReviewed({ ...match, device_id: deviceId });
+};
+
+export const getVisitCount = (): number => {
+  try {
+    const raw = localStorage.getItem(VISIT_COUNT_KEY);
+    const parsed = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const incrementVisitCount = (): number => {
+  const next = getVisitCount() + 1;
+  try {
+    localStorage.setItem(VISIT_COUNT_KEY, String(next));
+  } catch {
+    // Ignore storage errors
+  }
+  return next;
+};
+
+export const resetVisitCount = (): number => {
+  try {
+    localStorage.setItem(VISIT_COUNT_KEY, '0');
+  } catch {
+    // Ignore storage errors
+  }
+  return 0;
+};
+
+export const getStoredAdminPin = (fallbackPin?: string): string => {
+  try {
+    const saved = localStorage.getItem(ADMIN_PIN_KEY);
+    if (saved && saved.trim().length > 0) return saved.trim();
+  } catch {
+    // Ignore storage errors
+  }
+  return fallbackPin && fallbackPin.trim().length > 0 ? fallbackPin.trim() : DEFAULT_ADMIN_PIN;
+};
+
+export const setStoredAdminPin = (pin: string) => {
+  const clean = pin.trim();
+  if (!clean) return;
+  try {
+    localStorage.setItem(ADMIN_PIN_KEY, clean);
+  } catch {
+    // Ignore storage errors
+  }
 };

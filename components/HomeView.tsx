@@ -3,6 +3,7 @@ import { Review, RatingCategory } from '../types.ts';
 
 interface HomeViewProps {
   reviews: Review[];
+  visitCount?: number;
   categories: RatingCategory[];
   onStart: () => void;
   onToggleMode: () => void;
@@ -11,7 +12,7 @@ interface HomeViewProps {
   faceIdEnabled?: boolean;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onToggleMode, onAdmin, onRefresh }) => {
+const HomeView: React.FC<HomeViewProps> = ({ reviews, visitCount = 0, categories, onStart, onToggleMode, onAdmin, onRefresh }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [showOverallStats, setShowOverallStats] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -50,7 +51,19 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
   };
 
   const stats = useMemo(() => {
-    if (reviews.length === 0) return { avg: "4.8", count: 0, recent: [], categoryAverages: {} };
+    const categoryAverages: Record<string, string> = {};
+    if (reviews.length === 0) {
+      categories.forEach(cat => {
+        categoryAverages[cat.id] = "0.0";
+      });
+      return {
+        avg: "0.0",
+        count: 0,
+        visits: visitCount,
+        recent: [],
+        categoryAverages
+      };
+    }
 
     let totalStars = 0;
     let totalRatingCount = 0;
@@ -69,19 +82,12 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
       });
     });
 
-    const weightStars = totalStars + (50 * 5);
-    const weightCount = totalRatingCount + 50;
+    const finalAvg = totalRatingCount > 0 ? (totalStars / totalRatingCount).toFixed(1) : "0.0";
 
-    const rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
-    const finalAvg = Math.max(4.4, rawAvg).toFixed(1);
-
-    const categoryAverages: Record<string, string> = {};
     categories.forEach(cat => {
       const sum = catSums[cat.id] || 0;
       const count = catCounts[cat.id] || 0;
-      const wSum = sum + (5 * 5);
-      const wCount = count + 5;
-      categoryAverages[cat.id] = (wSum / wCount).toFixed(1);
+      categoryAverages[cat.id] = count > 0 ? (sum / count).toFixed(1) : "0.0";
     });
 
     const recentComments = reviews
@@ -92,10 +98,11 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
     return {
       avg: finalAvg,
       count: reviews.length,
+      visits: Math.max(visitCount, reviews.length),
       recent: recentComments,
       categoryAverages
     };
-  }, [reviews, categories]);
+  }, [reviews, categories, visitCount]);
 
   useEffect(() => {
     const interval = setInterval(() => setQrTick(Date.now()), 20000);
@@ -132,9 +139,9 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
   };
 
   return (
-    <div className="flex flex-col items-center w-full h-full justify-between pt-4 pb-6 px-6 relative z-10 overflow-hidden text-[#2b241e]">
+    <div className="flex flex-col items-center w-full min-h-full flex-1 justify-between pt-4 pb-8 px-6 relative z-10 text-[#2b241e]">
       {/* Top Action Bar */}
-      <div className="absolute top-4 right-6 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
+      <div className="fixed top-4 right-6 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
         <div className="flex gap-2.5">
           <button
             onClick={toggleFullscreen}
@@ -177,15 +184,15 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
           <div className="liquid-glass-modal p-3.5 rounded-[28px] mt-1 w-60 text-left animate-fade-in-up origin-top-right space-y-2">
             <button onClick={() => { onToggleMode(); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Launch Live Feed</button>
             <button onClick={() => { setShowOverallStats(true); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Overall Stats</button>
-            <button onClick={() => { onAdmin(); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Admin Panel</button>
+            <button onClick={() => { onAdmin(); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Admin Panel (PIN)</button>
           </div>
         )}
       </div>
 
       {/* QR Code Modal */}
       {showQrModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-[#2b241e]/45 backdrop-blur-xl animate-fade-in" onClick={() => setShowQrModal(false)}>
-          <div className="liquid-glass-modal p-7 md:p-8 rounded-[36px] w-full max-w-sm text-center animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-[#2b241e]/45 backdrop-blur-xl animate-fade-in overflow-y-auto" onClick={() => setShowQrModal(false)}>
+          <div className="liquid-glass-modal p-7 md:p-8 rounded-[36px] w-full max-w-sm text-center animate-fade-in-up my-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="text-left">
                 <h3 className="text-xl font-bold tracking-tight text-[#2b241e]">Scan on Your Phone</h3>
@@ -226,8 +233,8 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
 
       {/* Overall Stats Modal */}
       {showOverallStats && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-[#2b241e]/45 backdrop-blur-xl animate-fade-in" onClick={() => setShowOverallStats(false)}>
-          <div className="liquid-glass-modal p-7 md:p-8 rounded-[36px] w-full max-w-md animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-[#2b241e]/45 backdrop-blur-xl animate-fade-in overflow-y-auto" onClick={() => setShowOverallStats(false)}>
+          <div className="liquid-glass-modal p-7 md:p-8 rounded-[36px] w-full max-w-md animate-fade-in-up my-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="text-left">
                 <h3 className="text-xl font-bold tracking-tight text-[#2b241e]">Category Breakdown</h3>
@@ -249,13 +256,13 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
                   </div>
                   <div className="text-right shrink-0">
                     <div className="flex items-center gap-1 justify-end tabular-nums">
-                      <span className="text-2xl font-bold text-[#2b241e]">{stats.categoryAverages[cat.id] || "4.8"}</span>
+                      <span className="text-2xl font-bold text-[#2b241e]">{stats.categoryAverages[cat.id] || "0.0"}</span>
                       <span className="text-[#b68928] text-lg">★</span>
                     </div>
                     <div className="w-14 h-1.5 bg-[#312922]/12 rounded-full mt-1.5 overflow-hidden ml-auto">
                       <div
                         className="h-full bg-[#312922] rounded-full"
-                        style={{ width: `${(parseFloat(stats.categoryAverages[cat.id] || "4.8") / 5) * 100}%` }}
+                        style={{ width: `${(parseFloat(stats.categoryAverages[cat.id] || "0") / 5) * 100}%` }}
                       ></div>
                     </div>
                   </div>
@@ -273,7 +280,7 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-xl">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-xl py-4">
         {/* Main Frosted Sentiment Card */}
         <div className="w-full animate-fade-in-up flex flex-col items-center">
           <div className="liquid-glass px-10 py-7 rounded-[36px] flex flex-col items-center min-w-[300px] sm:min-w-[350px]">
@@ -293,7 +300,7 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
             <div className="flex justify-center items-center gap-10 tabular-nums">
               <div className="text-center">
                 <p className="text-xs text-[#5c5147] font-medium mb-0.5">Total Visits</p>
-                <p className="text-xl font-bold text-[#2b241e]">{stats.count + 420}</p>
+                <p className="text-xl font-bold text-[#2b241e]">{stats.visits}</p>
               </div>
               <div className="w-px h-9 bg-[#312922]/12"></div>
               <div className="text-center">
@@ -308,7 +315,7 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
         <div className="flex flex-col items-center gap-3.5 w-full max-w-md animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <button
             onClick={onStart}
-            className="liquid-cta group relative w-full py-4.5 sm:py-5 rounded-full text-xl sm:text-2xl font-bold tracking-tight active:scale-[0.98] overflow-hidden flex items-center justify-center gap-3"
+            className="liquid-cta group relative w-full py-4 sm:py-5 rounded-full text-xl sm:text-2xl font-bold tracking-tight active:scale-[0.98] overflow-hidden flex items-center justify-center gap-3"
           >
             <span className="relative z-10">Post Review</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 relative z-10 transition-transform duration-200 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -363,7 +370,7 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
       )}
 
       {/* Quiet Footer */}
-      <footer className="mt-3 text-xs font-medium text-[#5c5147]">
+      <footer className="mt-4 text-xs font-medium text-[#5c5147]">
         EDEX Educational Exhibition · IISJ
       </footer>
     </div>

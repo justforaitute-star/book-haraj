@@ -24,9 +24,11 @@
       --bg-y: 0%;
       --bg-blur: 0px;
     }
-    body {
+    html, body {
       font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, sans-serif;
-      overflow: hidden;
+      min-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
       -webkit-tap-highlight-color: transparent;
       background-color: #dfd6c7;
       color: var(--brand-ink);
@@ -267,7 +269,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="kiosk-bg h-screen w-screen m-0 p-0 text-[#2b241e] relative overflow-hidden">
+<body class="kiosk-bg min-h-screen w-full m-0 p-0 text-[#2b241e] relative overflow-y-auto overflow-x-hidden">
   <div class="dynamic-bg"></div>
   <div class="bg-overlay"></div>
   <div class="dot-grid-texture"></div>
@@ -275,7 +277,7 @@
      <div class="liquid-orb-warm absolute -top-44 right-[-8%] w-[720px] h-[720px] rounded-full blur-[95px]"></div>
      <div class="liquid-orb-cool absolute -bottom-48 -left-24 w-[760px] h-[760px] rounded-full blur-[105px]"></div>
   </div>
-  <div id="root" class="h-full w-full relative z-20"></div>
+  <div id="root" class="min-h-screen w-full relative z-20 flex flex-col"></div>
   <script type="module" src="./index.tsx"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import ThanksView from './components/ThanksView.tsx';
 import ReviewWall from './components/ReviewWall.tsx';
 import GalleryView from './components/GalleryView.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
+import LoginView from './components/LoginView.tsx';
 import AlreadyReviewedView from './components/AlreadyReviewedView.tsx';
 import RemoteWelcomeView from './components/RemoteWelcomeView.tsx';
 import Logo3 from './components/Logo3.tsx';
@@ -16,7 +17,13 @@ import {
   getOrCreateDeviceId,
   getSubmittedPhoneReview,
   markPhoneAsReviewed,
+  clearSubmittedPhoneReview,
   syncSubmittedReviewFromServer,
+  getVisitCount,
+  incrementVisitCount,
+  resetVisitCount,
+  getStoredAdminPin,
+  setStoredAdminPin,
   SubmittedPhoneReview
 } from './lib/deviceLock.ts';
 
@@ -56,6 +63,9 @@ const App: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<string>('');
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [visitCount, setVisitCount] = useState<number>(() => getVisitCount());
+  const [adminPin, setAdminPin] = useState<string>(() => getStoredAdminPin(getEnv('ADMIN_PIN') || '1969'));
 
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
   const [submittedPhoneReview, setSubmittedPhoneReview] = useState<SubmittedPhoneReview | null>(() =>
@@ -68,7 +78,8 @@ const App: React.FC = () => {
     background_url: '',
     background_config: { zoom: 1, x: 0, y: 0, blur: 0 },
     categories: DEFAULT_CATEGORIES,
-    face_id_enabled: true
+    face_id_enabled: true,
+    admin_pin: adminPin
   });
 
   const fetchConfig = useCallback(async () => {
@@ -79,12 +90,17 @@ const App: React.FC = () => {
     try {
       const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
       if (!error && data) {
+        if (data.admin_pin) {
+          setAdminPin(String(data.admin_pin));
+          setStoredAdminPin(String(data.admin_pin));
+        }
         setConfig({
           logo_url: data.logo_url || '/assets/aistudio/image_9f5c8cd4.png',
           background_url: data.background_url || '',
           background_config: data.background_config || { zoom: 1, x: 0, y: 0, blur: 0 },
           categories: data.categories || DEFAULT_CATEGORIES,
-          face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true
+          face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true,
+          admin_pin: data.admin_pin || getStoredAdminPin(getEnv('ADMIN_PIN') || '1969')
         });
       }
     } catch (err) {
@@ -165,6 +181,7 @@ const App: React.FC = () => {
             setSubmittedPhoneReview(existing);
             setStep(KioskStep.ALREADY_REVIEWED);
           } else {
+            setVisitCount(incrementVisitCount());
             setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM);
           }
         }
@@ -194,6 +211,7 @@ const App: React.FC = () => {
       }
     }
 
+    setVisitCount(incrementVisitCount());
     if (config.face_id_enabled) {
       setStep(KioskStep.CAMERA);
     } else {
@@ -364,10 +382,31 @@ const App: React.FC = () => {
     }
   };
 
+  const handleResetAllStats = useCallback(async () => {
+    if (supabase) {
+      const { error } = await supabase.from('reviews').delete().gte('timestamp', 0);
+      if (error) throw error;
+    }
+    setReviews([]);
+    setCurrentReview({});
+    clearSubmittedPhoneReview();
+    setSubmittedPhoneReview(null);
+    setVisitCount(resetVisitCount());
+  }, []);
+
+  const handleAdminPinUpdate = useCallback((newPin: string) => {
+    const clean = newPin.trim();
+    if (!clean) return;
+    setAdminPin(clean);
+    setStoredAdminPin(clean);
+    setConfig((prev) => ({ ...prev, admin_pin: clean }));
+  }, []);
+
   const resetKiosk = () => {
     setCurrentReview({});
     setIsSubmitting(false);
     setGalleryFaceId(null);
+    setIsAdminAuthenticated(false);
     if (isRemoteMode) {
       const existing = submittedPhoneReview || getSubmittedPhoneReview();
       setStep(existing ? KioskStep.ALREADY_REVIEWED : KioskStep.HOME);
@@ -377,7 +416,27 @@ const App: React.FC = () => {
   };
 
   if (step === KioskStep.ADMIN && !isRemoteMode) {
-    return <AdminPanel config={config} onBack={resetKiosk} reviews={reviews} onUpdate={() => { fetchReviews(); fetchConfig(); }} />;
+    if (!isAdminAuthenticated) {
+      return (
+        <LoginView
+          adminPin={adminPin}
+          logoUrl={config.logo_url}
+          onLogin={() => setIsAdminAuthenticated(true)}
+          onCancel={resetKiosk}
+        />
+      );
+    }
+    return (
+      <AdminPanel
+        config={{ ...config, admin_pin: adminPin }}
+        onBack={resetKiosk}
+        reviews={reviews}
+        visitCount={visitCount}
+        onUpdate={() => { fetchReviews(); fetchConfig(); }}
+        onResetAll={handleResetAllStats}
+        onAdminPinChange={handleAdminPinUpdate}
+      />
+    );
   }
 
   if (step === KioskStep.GALLERY && galleryFaceId) {
@@ -405,7 +464,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="h-full w-full relative flex flex-col text-[#2b241e]">
+    <div className="min-h-screen w-full relative flex flex-col text-[#2b241e]">
       {!isRemoteMode && step === KioskStep.HOME && (
         <header className="pt-8 sm:pt-10 pb-2 w-full flex flex-col items-center shrink-0 pointer-events-none z-20">
           <div className="pointer-events-auto">
@@ -413,7 +472,7 @@ const App: React.FC = () => {
           </div>
         </header>
       )}
-      <main className="flex-1 w-full flex items-center justify-center relative overflow-hidden z-10">
+      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 py-2">
         {isSubmitting ? (
           <div className="liquid-glass rounded-[32px] px-10 py-9 flex flex-col items-center gap-6 animate-fade-in">
              <div className="w-16 h-16 border-4 border-[#312922]/15 border-t-[#312922] rounded-full animate-spin"></div>
@@ -434,10 +493,14 @@ const App: React.FC = () => {
               ) : (
                 <HomeView
                   reviews={reviews}
+                  visitCount={visitCount}
                   categories={config.categories}
                   onStart={handleStartReview}
                   onToggleMode={() => setIsDisplayMode(true)}
-                  onAdmin={() => setStep(KioskStep.ADMIN)}
+                  onAdmin={() => {
+                    setIsAdminAuthenticated(false);
+                    setStep(KioskStep.ADMIN);
+                  }}
                   onRefresh={handleManualRefresh}
                   faceIdEnabled={config.face_id_enabled}
                 />

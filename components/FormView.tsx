@@ -192,7 +192,7 @@ const FormView: React.FC<FormViewProps> = ({ categories, onSubmit, onCancel, isR
   };
 
   return (
-    <div className={`liquid-glass flex flex-col w-full relative transition-all duration-300 ${isRemote ? 'h-[calc(100%-24px)] max-w-md mx-3 my-3 rounded-[36px]' : 'h-[82vh] max-w-3xl mx-6 rounded-[40px]'} overflow-hidden animate-fade-in text-[#2b241e]`}>
+    <div className={`liquid-glass flex flex-col w-full relative transition-all duration-300 ${isRemote ? 'min-h-[500px] max-w-md mx-3 my-4 rounded-[36px]' : 'min-h-[540px] max-w-3xl mx-6 my-6 rounded-[40px]'} animate-fade-in text-[#2b241e]`}>
       <div className="px-6 pt-6 pb-2 flex items-center justify-between shrink-0 z-40">
         <button onClick={prevStep} className="liquid-glass-subtle w-11 h-11 rounded-full flex items-center justify-center text-[#2b241e]" aria-label="Back">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

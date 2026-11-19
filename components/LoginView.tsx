@@ -1,77 +1,87 @@
-
 import React, { useState } from 'react';
 import Logo3 from './Logo3.tsx';
 
 interface LoginViewProps {
   onLogin: () => void;
+  onCancel?: () => void;
+  adminPin: string;
   logoUrl?: string;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLogin, logoUrl }) => {
-  const [password, setPassword] = useState('');
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, onCancel, adminPin, logoUrl }) => {
+  const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'haraj') {
+    if (pin.trim() === adminPin) {
       onLogin();
     } else {
       setError(true);
-      setPassword('');
+      setPin('');
       setTimeout(() => setError(false), 2000);
     }
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center p-6 bg-black text-white overflow-hidden animate-fade-in">
-      <div className="absolute inset-0 opacity-5 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.1),transparent_50%)]"></div>
-      </div>
-
-      <div className="mb-12 scale-75 md:scale-100">
+    <div className="min-h-screen w-full flex flex-col items-center justify-between px-6 py-8 animate-fade-in text-[#2b241e]">
+      <div className="pt-2 shrink-0 scale-75">
         <Logo3 logoUrl={logoUrl} />
       </div>
 
-      <div className="w-full max-w-sm bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 shadow-2xl relative z-10 animate-fade-in-up">
-        <div className="text-center mb-8">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500 mb-2">STATION AUTH</h2>
-          <p className="text-xl font-black italic tracking-tighter uppercase leading-none">Access Required</p>
+      <div className="liquid-glass w-full max-w-sm my-auto p-8 rounded-[36px] relative z-10 animate-fade-in-up">
+        <div className="text-center mb-7">
+          <p className="text-xs font-semibold text-[#5c5147] uppercase tracking-wider mb-1.5">
+            Admin Panel Lock
+          </p>
+          <h2 className="text-2xl font-extrabold text-[#2b241e] tracking-tight leading-none">
+            Enter Admin PIN
+          </h2>
+          <p className="text-xs text-[#5c5147] mt-2">
+            Protected access for EDEX IISJ organizers
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="relative">
             <input
               type="password"
+              inputMode="numeric"
               autoFocus
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="ENTER STATION PIN"
-              className={`w-full bg-black/40 border-b ${error ? 'border-red-500 text-red-500' : 'border-white/10 text-white'} focus:border-white outline-none py-4 text-center font-black tracking-[0.3em] text-xs uppercase transition-all placeholder:text-white/10 rounded-xl`}
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="Enter PIN..."
+              className={`w-full bg-white/65 border ${error ? 'border-[#9f2d2d] text-[#9f2d2d]' : 'border-[#312922]/20 text-[#2b241e]'} focus:border-[#312922] outline-none py-4 px-5 text-center font-bold tracking-[0.35em] text-lg transition-all placeholder:text-[#6e6256]/60 placeholder:tracking-normal placeholder:text-sm rounded-2xl`}
+              aria-label="Admin PIN"
             />
             {error && (
-              <p className="absolute -bottom-6 left-0 right-0 text-center text-[8px] font-black text-red-500 uppercase tracking-widest animate-pulse">
-                INVALID ACCESS CODE
+              <p className="mt-2 text-center text-xs font-semibold text-[#9f2d2d]">
+                Incorrect PIN. Please try again.
               </p>
             )}
           </div>
 
           <button
             type="submit"
-            className="w-full py-5 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+            className="liquid-cta w-full py-4 rounded-full font-bold text-sm active:scale-[0.98]"
           >
-            AUTHORIZE
+            Unlock Admin Panel
           </button>
-        </form>
 
-        <div className="mt-10 pt-8 border-t border-white/5 text-center">
-          <p className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.2em]">
-            Station ID: BHRJ-ST-01
-          </p>
-        </div>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="liquid-glass-subtle w-full py-3.5 rounded-full font-semibold text-xs text-[#2b241e] active:scale-[0.98]"
+            >
+              Back to Home
+            </button>
+          )}
+        </form>
       </div>
 
-      <footer className="fixed bottom-12 text-center opacity-20">
-        <p className="text-[8px] font-black uppercase tracking-[0.8em]">ADMINISTRATIVE INTERFACE ONLY</p>
+      <footer className="pt-6 text-xs font-medium text-[#5c5147] shrink-0">
+        EDEX Educational Exhibition · IISJ
       </footer>
     </div>
   );

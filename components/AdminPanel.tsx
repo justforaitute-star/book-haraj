@@ -4,17 +4,29 @@ import { supabase } from '../lib/supabase.ts';
 
 interface AdminPanelProps {
   reviews: Review[];
+  visitCount?: number;
   config: AppConfig;
   onBack: () => void;
   onUpdate: () => void;
+  onResetAll: () => Promise<void>;
+  onAdminPinChange: (newPin: string) => void;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpdate }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({
+  reviews,
+  visitCount = 0,
+  config,
+  onBack,
+  onUpdate,
+  onResetAll,
+  onAdminPinChange
+}) => {
   const [activeTab, setActiveTab] = useState<'REVIEWS' | 'CONFIG'>('REVIEWS');
   const [search, setSearch] = useState('');
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPlacementEditor, setShowPlacementEditor] = useState(false);
+  const [pinDraft, setPinDraft] = useState(config.admin_pin || '1969');
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +95,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     }
   };
 
+  const handleResetAllClick = async () => {
+    if (!confirm("Reset ALL recorded visits and delete ALL reviews? This action cannot be undone.")) return;
+    setIsProcessing(true);
+    try {
+      await onResetAll();
+      setSearch('');
+      setEditingReview(null);
+      alert("All visits and reviews have been reset to zero.");
+    } catch (err: any) {
+      alert(`Reset failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'bg') => {
     const file = e.target.files?.[0];
     if (!file || !supabase) return;
@@ -119,19 +146,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   };
 
   const handleSaveConfig = async () => {
-    if (!supabase) return;
+    const trimmedPin = pinDraft.trim();
+    if (trimmedPin.length >= 4) {
+      onAdminPinChange(trimmedPin);
+    }
+
+    if (!supabase) {
+      alert("Local configuration saved.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('settings').upsert({
+      const payload: Record<string, any> = {
         id: 1,
         logo_url: localConfig.logo_url,
         background_url: localConfig.background_url,
         background_config: localConfig.background_config,
         categories: localConfig.categories,
-        face_id_enabled: localConfig.face_id_enabled
-      });
+        face_id_enabled: localConfig.face_id_enabled,
+        admin_pin: trimmedPin.length >= 4 ? trimmedPin : config.admin_pin
+      };
 
-      if (error) throw error;
+      const { error } = await supabase.from('settings').upsert(payload);
+      if (error) {
+        delete payload.admin_pin;
+        const { error: fbError } = await supabase.from('settings').upsert(payload);
+        if (fbError) throw fbError;
+      }
       alert("Global configuration applied successfully.");
       onUpdate();
     } catch (err: any) {
@@ -183,7 +225,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   const bgConfig = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
 
   return (
-    <div className="h-full w-full flex flex-col items-center p-6 md:p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100] text-[#2b241e]">
+    <div className="min-h-screen w-full flex flex-col items-center p-6 md:p-8 animate-fade-in relative z-[100] text-[#2b241e]">
       <header className="w-full max-w-4xl flex items-center justify-between mb-8 shrink-0">
         <button onClick={onBack} className="liquid-glass-subtle flex items-center gap-2.5 px-4 py-2.5 rounded-full text-[#2b241e]">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -213,11 +255,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         </button>
       </div>
 
-      <div className="w-full max-w-2xl space-y-6 pb-28">
+      <div className="w-full max-w-2xl space-y-6 pb-20">
         {activeTab === 'REVIEWS' ? (
           <>
             <div className="liquid-glass rounded-[32px] p-7">
-              <h3 className="text-xs font-semibold text-[#5c5147] mb-4">Search Station Registry</h3>
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-5 border-b border-[#312922]/12">
+                <div className="flex items-center gap-6 tabular-nums">
+                  <div>
+                    <p className="text-xs text-[#5c5147] font-medium">Recorded Visits</p>
+                    <p className="text-2xl font-extrabold text-[#2b241e]">{Math.max(visitCount, reviews.length)}</p>
+                  </div>
+                  <div className="w-px h-8 bg-[#312922]/12"></div>
+                  <div>
+                    <p className="text-xs text-[#5c5147] font-medium">Total Reviews</p>
+                    <p className="text-2xl font-extrabold text-[#2b241e]">{reviews.length}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleResetAllClick}
+                  disabled={isProcessing}
+                  className="liquid-glass-subtle px-5 py-2.5 rounded-full text-xs font-bold text-[#9f2d2d] hover:text-[#7f1d1d] active:scale-[0.98]"
+                >
+                  {isProcessing ? 'Resetting...' : 'Reset All Visits & Reviews'}
+                </button>
+              </div>
+
+              <h3 className="text-xs font-semibold text-[#5c5147] mb-3">Search Station Registry</h3>
               <input
                 type="text"
                 placeholder="Type serial number or UUID..."
@@ -300,6 +363,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
           </>
         ) : (
           <div className="space-y-6 animate-fade-in-up">
+            <div className="liquid-glass rounded-[32px] p-7">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-bold text-[#2b241e]">Admin Panel PIN</h3>
+                  <p className="text-xs text-[#5c5147] mt-0.5">PIN required before accessing Admin Panel (minimum 4 characters)</p>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={pinDraft}
+                  onChange={(e) => setPinDraft(e.target.value)}
+                  placeholder="Enter PIN..."
+                  className="w-full sm:w-40 bg-white/60 border border-[#312922]/20 rounded-xl px-4 py-2.5 text-center text-sm font-bold tracking-widest text-[#2b241e] outline-none focus:border-[#312922]"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="liquid-glass rounded-[32px] p-7 flex flex-col items-center">
                 <h3 className="text-xs font-semibold text-[#5c5147] mb-5">Station Logo</h3>
