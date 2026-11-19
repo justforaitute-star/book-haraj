@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { KioskStep, Review, DetailedRatings, AppConfig, RatingCategory } from './types.ts';
 import HomeView from './components/HomeView.tsx';
 import CameraView from './components/CameraView.tsx';
@@ -7,10 +7,18 @@ import FormView from './components/FormView.tsx';
 import ThanksView from './components/ThanksView.tsx';
 import ReviewWall from './components/ReviewWall.tsx';
 import GalleryView from './components/GalleryView.tsx';
-import LoginView from './components/LoginView.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
+import AlreadyReviewedView from './components/AlreadyReviewedView.tsx';
+import RemoteWelcomeView from './components/RemoteWelcomeView.tsx';
 import Logo3 from './components/Logo3.tsx';
 import { supabase } from './lib/supabase.ts';
+import {
+  getOrCreateDeviceId,
+  getSubmittedPhoneReview,
+  markPhoneAsReviewed,
+  syncSubmittedReviewFromServer,
+  SubmittedPhoneReview
+} from './lib/deviceLock.ts';
 
 const getEnv = (key: string): string => {
   const searchKeys = [`VITE_${key}`, key, `REACT_APP_${key}`, `PUBLIC_${key}`];
@@ -32,14 +40,14 @@ const PHOTOPRISM_URL = getEnv('PHOTOPRISM_URL') || 'https://photoprism.example.c
 const PHOTOPRISM_API_KEY = getEnv('PHOTOPRISM_API_KEY') || '';
 
 const DEFAULT_CATEGORIES: RatingCategory[] = [
-  { id: 'books', label: 'Book Availability', question: 'How was the selection?' },
-  { id: 'overall', label: 'Overall Experience', question: 'Your final verdict?' },
+  { id: 'universities', label: 'University Stalls', question: 'How informative were the college and university exhibits?' },
+  { id: 'guidance', label: 'Career Guidance', question: 'How helpful were the counseling and expert sessions?' },
+  { id: 'organization', label: 'Exhibition Setup', question: 'How was the organization and flow at IISJ?' },
+  { id: 'overall', label: 'Overall Experience', question: 'Your final verdict on EDEX?' },
 ];
 
 const App: React.FC = () => {
   const [step, setStep] = useState<KioskStep>(KioskStep.HOME);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isPublicMode, setIsPublicMode] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentReview, setCurrentReview] = useState<Partial<Review>>({});
   const [isDisplayMode, setIsDisplayMode] = useState(false);
@@ -48,9 +56,15 @@ const App: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<string>('');
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+
+  const deviceId = useMemo(() => getOrCreateDeviceId(), []);
+  const [submittedPhoneReview, setSubmittedPhoneReview] = useState<SubmittedPhoneReview | null>(() =>
+    getSubmittedPhoneReview()
+  );
+  const remoteInitializedRef = useRef(false);
   
   const [config, setConfig] = useState<AppConfig>({
-    logo_url: '',
+    logo_url: '/assets/aistudio/image_9f5c8cd4.png',
     background_url: '',
     background_config: { zoom: 1, x: 0, y: 0, blur: 0 },
     categories: DEFAULT_CATEGORIES,
@@ -58,21 +72,25 @@ const App: React.FC = () => {
   });
 
   const fetchConfig = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      setIsConfigLoaded(true);
+      return;
+    }
     try {
       const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
       if (!error && data) {
         setConfig({
-          logo_url: data.logo_url || '',
+          logo_url: data.logo_url || '/assets/aistudio/image_9f5c8cd4.png',
           background_url: data.background_url || '',
           background_config: data.background_config || { zoom: 1, x: 0, y: 0, blur: 0 },
           categories: data.categories || DEFAULT_CATEGORIES,
           face_id_enabled: data.face_id_enabled !== undefined ? data.face_id_enabled : true
         });
       }
-      setIsConfigLoaded(true);
     } catch (err) {
       console.error("Configuration sync error:", err);
+    } finally {
+      setIsConfigLoaded(true);
     }
   }, []);
 
@@ -85,11 +103,18 @@ const App: React.FC = () => {
         .order('timestamp', { ascending: false })
         .limit(200);
       if (fetchError) throw fetchError;
-      if (data) setReviews(data as Review[]);
+      if (data) {
+        const fetched = data as Review[];
+        setReviews(fetched);
+        const matched = syncSubmittedReviewFromServer(fetched, deviceId);
+        if (matched) {
+          setSubmittedPhoneReview(matched);
+        }
+      }
     } catch (err) {
       console.error("Reviews sync error:", err);
     }
-  }, []);
+  }, [deviceId]);
 
   const handleManualRefresh = useCallback(async () => {
     await Promise.all([fetchReviews(), fetchConfig()]);
@@ -125,9 +150,6 @@ const App: React.FC = () => {
     const mode = params.get('mode');
     
     if (mode === 'remote' || mode === 'gallery') {
-      setIsPublicMode(true);
-      setIsAuthenticated(true);
-      
       if (mode === 'gallery') {
         const fid = params.get('faceId');
         if (fid) {
@@ -136,16 +158,42 @@ const App: React.FC = () => {
         }
       } else if (mode === 'remote') {
         setIsRemoteMode(true);
-        if (isConfigLoaded) {
-          setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM);
+        if (isConfigLoaded && !remoteInitializedRef.current) {
+          remoteInitializedRef.current = true;
+          const existing = submittedPhoneReview || getSubmittedPhoneReview();
+          if (existing) {
+            setSubmittedPhoneReview(existing);
+            setStep(KioskStep.ALREADY_REVIEWED);
+          } else {
+            setStep(config.face_id_enabled ? KioskStep.CAMERA : KioskStep.FORM);
+          }
         }
       }
     } else if (mode === 'display') {
       setIsDisplayMode(true);
     }
-  }, [isConfigLoaded, config.face_id_enabled]);
+  }, [isConfigLoaded, config.face_id_enabled, submittedPhoneReview]);
+
+  useEffect(() => {
+    if (
+      isRemoteMode &&
+      submittedPhoneReview &&
+      (step === KioskStep.HOME || step === KioskStep.CAMERA || step === KioskStep.FORM)
+    ) {
+      setStep(KioskStep.ALREADY_REVIEWED);
+    }
+  }, [isRemoteMode, submittedPhoneReview, step]);
 
   const handleStartReview = () => {
+    if (isRemoteMode) {
+      const existing = submittedPhoneReview || getSubmittedPhoneReview();
+      if (existing) {
+        setSubmittedPhoneReview(existing);
+        setStep(KioskStep.ALREADY_REVIEWED);
+        return;
+      }
+    }
+
     if (config.face_id_enabled) {
       setStep(KioskStep.CAMERA);
     } else {
@@ -216,39 +264,99 @@ const App: React.FC = () => {
   };
 
   const handleFormSubmit = async (details: { name: string; ratings: DetailedRatings; comment: string }) => {
-    if (!supabase || isSubmitting) return;
+    if (isSubmitting) return;
+
+    if (isRemoteMode) {
+      const existingLocal = submittedPhoneReview || getSubmittedPhoneReview();
+      if (existingLocal) {
+        setSubmittedPhoneReview(existingLocal);
+        setStep(KioskStep.ALREADY_REVIEWED);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmissionStatus('Initializing...');
     try {
+      if (isRemoteMode && supabase) {
+        try {
+          const { data: existingRows, error: checkError } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('device_id', deviceId)
+            .limit(1);
+          if (!checkError && existingRows && existingRows.length > 0) {
+            const synced = markPhoneAsReviewed({ ...(existingRows[0] as Review), device_id: deviceId });
+            setSubmittedPhoneReview(synced);
+            setStep(KioskStep.ALREADY_REVIEWED);
+            return;
+          }
+        } catch {
+          // Ignore if device_id column is not present in Supabase schema
+        }
+      }
+
       const rawPhoto = currentReview.photo || '';
       
       const [faceId, photoUrl] = await Promise.all([
         (config.face_id_enabled && rawPhoto) ? identifyFaceWithPhotoPrism(rawPhoto) : Promise.resolve(''),
-        rawPhoto ? uploadToSupabase(rawPhoto) : Promise.resolve(config.logo_url || '')
+        (supabase && rawPhoto) ? uploadToSupabase(rawPhoto) : Promise.resolve(rawPhoto || config.logo_url || '')
       ]);
 
-      const newReview = {
+      const newReview: Partial<Review> = {
         name: details.name,
         photo: photoUrl,
-        face_id: faceId || null,
+        face_id: faceId || undefined,
+        device_id: isRemoteMode ? deviceId : null,
         ratings: details.ratings,
         comment: details.comment,
         timestamp: Date.now()
       };
       
       setSubmissionStatus('Publishing...');
-      const { data, error } = await supabase.from('reviews').insert([newReview]).select();
-      if (error) {
-        const fallbackReview = { ...newReview };
-        delete (fallbackReview as any).face_id;
-        const { data: fbData, error: fbError } = await supabase.from('reviews').insert([fallbackReview]).select();
-        if (fbError) throw fbError;
-        if (fbData) setCurrentReview(fbData[0]);
-      } else if (data) {
-        setCurrentReview(data[0]);
+
+      let savedRecord: Partial<Review> = newReview;
+
+      if (supabase) {
+        const { data, error } = await supabase.from('reviews').insert([newReview]).select();
+        if (error) {
+          const withoutDeviceId = { ...newReview };
+          delete withoutDeviceId.device_id;
+          const { data: fb1Data, error: fb1Error } = await supabase.from('reviews').insert([withoutDeviceId]).select();
+          if (fb1Error) {
+            const withoutOptionalCols = { ...withoutDeviceId };
+            delete withoutOptionalCols.face_id;
+            const { data: fb2Data, error: fb2Error } = await supabase.from('reviews').insert([withoutOptionalCols]).select();
+            if (fb2Error) throw fb2Error;
+            if (fb2Data && fb2Data[0]) savedRecord = fb2Data[0];
+          } else if (fb1Data && fb1Data[0]) {
+            savedRecord = fb1Data[0];
+          }
+        } else if (data && data[0]) {
+          savedRecord = data[0];
+        }
+        fetchReviews();
+      } else {
+        const localReview: Review = {
+          id: `local_${Date.now()}`,
+          name: details.name,
+          photo: photoUrl,
+          face_id: faceId || undefined,
+          device_id: isRemoteMode ? deviceId : null,
+          ratings: details.ratings,
+          comment: details.comment,
+          timestamp: newReview.timestamp || Date.now()
+        };
+        savedRecord = localReview;
+        setReviews((prev) => [localReview, ...prev]);
+      }
+
+      setCurrentReview(savedRecord);
+      if (isRemoteMode) {
+        const locked = markPhoneAsReviewed({ ...savedRecord, device_id: deviceId });
+        setSubmittedPhoneReview(locked);
       }
       setStep(KioskStep.THANKS);
-      fetchReviews();
     } catch (err: any) {
       alert(`Submission failed: ${err.message}`);
     } finally {
@@ -257,17 +365,18 @@ const App: React.FC = () => {
   };
 
   const resetKiosk = () => {
-    setStep(KioskStep.HOME);
     setCurrentReview({});
     setIsSubmitting(false);
     setGalleryFaceId(null);
+    if (isRemoteMode) {
+      const existing = submittedPhoneReview || getSubmittedPhoneReview();
+      setStep(existing ? KioskStep.ALREADY_REVIEWED : KioskStep.HOME);
+    } else {
+      setStep(KioskStep.HOME);
+    }
   };
 
-  if (!isAuthenticated && !isPublicMode) {
-    return <LoginView logoUrl={config.logo_url} onLogin={() => setIsAuthenticated(true)} />;
-  }
-
-  if (step === KioskStep.ADMIN) {
+  if (step === KioskStep.ADMIN && !isRemoteMode) {
     return <AdminPanel config={config} onBack={resetKiosk} reviews={reviews} onUpdate={() => { fetchReviews(); fetchConfig(); }} />;
   }
 
@@ -279,10 +388,26 @@ const App: React.FC = () => {
     return <ReviewWall reviews={reviews} categories={config.categories} fullScreen onExit={() => setIsDisplayMode(false)} onRefresh={handleManualRefresh} />;
   }
 
+  if (step === KioskStep.ALREADY_REVIEWED) {
+    return (
+      <AlreadyReviewedView
+        submittedReview={submittedPhoneReview}
+        categories={config.categories}
+        logoUrl={config.logo_url}
+        faceIdEnabled={config.face_id_enabled}
+        onViewFeed={() => setIsDisplayMode(true)}
+        onOpenGallery={(fid) => {
+          setGalleryFaceId(fid);
+          setStep(KioskStep.GALLERY);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className={`h-full w-full relative flex flex-col transition-colors duration-1000 ${isRemoteMode ? 'bg-black text-white' : 'text-white'}`}>
+    <div className="h-full w-full relative flex flex-col text-[#2b241e]">
       {!isRemoteMode && step === KioskStep.HOME && (
-        <header className="pt-16 pb-2 w-full flex flex-col items-center shrink-0 pointer-events-none z-20">
+        <header className="pt-8 sm:pt-10 pb-2 w-full flex flex-col items-center shrink-0 pointer-events-none z-20">
           <div className="pointer-events-auto">
             <Logo3 logoUrl={config.logo_url} />
           </div>
@@ -290,19 +415,60 @@ const App: React.FC = () => {
       )}
       <main className="flex-1 w-full flex items-center justify-center relative overflow-hidden z-10">
         {isSubmitting ? (
-          <div className="flex flex-col items-center gap-8 animate-fade-in">
-             <div className="w-20 h-20 border-[6px] border-white/10 border-t-white rounded-full animate-spin shadow-2xl"></div>
+          <div className="liquid-glass rounded-[32px] px-10 py-9 flex flex-col items-center gap-6 animate-fade-in">
+             <div className="w-16 h-16 border-4 border-[#312922]/15 border-t-[#312922] rounded-full animate-spin"></div>
              <div className="text-center">
-                <p className="text-xs font-black uppercase tracking-[0.6em] text-white animate-pulse mb-2">Processing</p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{submissionStatus}</p>
+                <p className="text-sm font-semibold text-[#2b241e] mb-1">Publishing your review</p>
+                <p className="text-xs text-[#5c5147]">{submissionStatus || 'Please wait a moment'}</p>
              </div>
           </div>
         ) : (
           <>
-            {step === KioskStep.HOME && <HomeView reviews={reviews} categories={config.categories} onStart={handleStartReview} onToggleMode={() => setIsDisplayMode(true)} onAdmin={() => setStep(KioskStep.ADMIN)} onRefresh={handleManualRefresh} faceIdEnabled={config.face_id_enabled} />}
-            {step === KioskStep.CAMERA && <CameraView onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }} onCancel={resetKiosk} isRemote={isRemoteMode} />}
-            {step === KioskStep.FORM && <FormView categories={config.categories} photo={currentReview.photo || ''} onSubmit={handleFormSubmit} onCancel={resetKiosk} isRemote={isRemoteMode} />}
-            {step === KioskStep.THANKS && <ThanksView onFinish={resetKiosk} isRemote={isRemoteMode} faceId={currentReview.face_id} faceIdEnabled={config.face_id_enabled} />}
+            {step === KioskStep.HOME && (
+              isRemoteMode ? (
+                <RemoteWelcomeView
+                  logoUrl={config.logo_url}
+                  onStart={handleStartReview}
+                  onViewFeed={() => setIsDisplayMode(true)}
+                />
+              ) : (
+                <HomeView
+                  reviews={reviews}
+                  categories={config.categories}
+                  onStart={handleStartReview}
+                  onToggleMode={() => setIsDisplayMode(true)}
+                  onAdmin={() => setStep(KioskStep.ADMIN)}
+                  onRefresh={handleManualRefresh}
+                  faceIdEnabled={config.face_id_enabled}
+                />
+              )
+            )}
+            {step === KioskStep.CAMERA && (
+              <CameraView
+                onCapture={(p) => { setCurrentReview({ photo: p }); setStep(KioskStep.FORM); }}
+                onCancel={resetKiosk}
+                onSkip={isRemoteMode ? () => { setCurrentReview({ photo: undefined }); setStep(KioskStep.FORM); } : undefined}
+                isRemote={isRemoteMode}
+              />
+            )}
+            {step === KioskStep.FORM && (
+              <FormView
+                categories={config.categories}
+                photo={currentReview.photo || ''}
+                onSubmit={handleFormSubmit}
+                onCancel={resetKiosk}
+                isRemote={isRemoteMode}
+              />
+            )}
+            {step === KioskStep.THANKS && (
+              <ThanksView
+                onFinish={resetKiosk}
+                onViewFeed={isRemoteMode ? () => setIsDisplayMode(true) : undefined}
+                isRemote={isRemoteMode}
+                faceId={currentReview.face_id}
+                faceIdEnabled={config.face_id_enabled}
+              />
+            )}
           </>
         )}
       </main>

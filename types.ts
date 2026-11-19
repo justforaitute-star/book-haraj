@@ -4,7 +4,8 @@ export enum KioskStep {
   FORM = 'FORM',
   THANKS = 'THANKS',
   GALLERY = 'GALLERY',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
+  ALREADY_REVIEWED = 'ALREADY_REVIEWED'
 }
 
 export interface RatingCategory {
@@ -38,6 +39,7 @@ export interface Review {
   name: string;
   photo: string; // URL from Supabase Storage
   face_id?: string; // Unique facial signature for grouping
+  device_id?: string | null; // Persistent phone identifier to enforce 1 review per phone
   ratings: DetailedRatings;
   comment: string;
   timestamp: number;

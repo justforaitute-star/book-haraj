@@ -1,7 +1,8 @@
 {
-  "name": "Review App",
-  "description": "A premium, kiosk-style application for expo visitors to leave reviews with photos, ratings, and feedback.",
+  "name": "EDEX Educational Exhibition · IISJ",
+  "description": "A premium white and gold review application for EDEX educational exhibition visitors at IISJ to leave reviews with ratings and photos.",
   "requestFramePermissions": [
     "camera"
-  ]
+  ],
+  "majorCapabilities": []
 }

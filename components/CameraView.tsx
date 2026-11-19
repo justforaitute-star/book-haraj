@@ -3,10 +3,11 @@ import React, { useRef, useEffect, useState } from 'react';
 interface CameraViewProps {
   onCapture: (photo: string) => void;
   onCancel: () => void;
+  onSkip?: () => void;
   isRemote?: boolean;
 }
 
-const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote = false }) => {
+const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, onSkip, isRemote = false }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -24,10 +25,10 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
 
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: 'user', 
-            width: { ideal: 1280 }, 
-            height: { ideal: 720 } 
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           },
           audio: false
         });
@@ -36,7 +37,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
         }
-      } catch (err) {
+      } catch {
         setError("Camera access denied. Please allow permissions in your settings.");
       }
     }
@@ -65,7 +66,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      
+
       const vWidth = video.videoWidth;
       const vHeight = video.videoHeight;
       if (vWidth === 0 || vHeight === 0) return;
@@ -81,7 +82,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
       if (!ctx) return;
 
       let sWidth, sHeight, sx, sy;
-      
+
       if (vWidth / vHeight > targetRatio) {
         sHeight = vHeight;
         sWidth = vHeight * targetRatio;
@@ -105,66 +106,86 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, isRemote =
 
   if (error) {
     return (
-      <div className="flex flex-col items-center bg-black/50 backdrop-blur-3xl p-10 rounded-[40px] border border-white/10 shadow-2xl max-w-sm text-center mx-6 animate-fade-in">
-        <h3 className="text-xl font-black mb-4 text-white uppercase tracking-tighter">Permission Needed</h3>
-        <p className="text-slate-400 mb-8 text-sm">{error}</p>
-        <button onClick={() => window.location.reload()} className="w-full py-4 bg-white text-black rounded-xl font-black uppercase text-xs">Retry Access</button>
+      <div className="liquid-glass-modal flex flex-col items-center p-8 rounded-[36px] max-w-sm text-center mx-6 animate-fade-in text-[#2b241e]">
+        <h3 className="text-xl font-bold mb-2 text-[#2b241e] tracking-tight">Camera Permission Needed</h3>
+        <p className="text-[#5c5147] mb-7 text-sm leading-relaxed">{error}</p>
+        <div className="w-full space-y-2.5">
+          <button onClick={() => window.location.reload()} className="liquid-cta w-full py-3.5 rounded-full font-bold text-xs active:scale-[0.98]">Retry Access</button>
+          {onSkip && (
+            <button onClick={onSkip} className="liquid-glass-subtle w-full py-3.5 text-[#2b241e] rounded-full font-semibold text-xs active:scale-[0.98]">
+              Skip Photo & Continue
+            </button>
+          )}
+          <button onClick={onCancel} className="w-full py-2.5 text-[#5c5147] hover:text-[#2b241e] font-medium text-xs">
+            Back
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`relative flex flex-col items-center w-full transition-all duration-700 ${isRemote ? 'h-screen w-screen max-w-none' : 'max-w-xl aspect-[9/16] rounded-[60px] border-[12px] border-white'} bg-black overflow-hidden shadow-2xl`}>
-      
-      {/* Back Button */}
-      <button 
-        onClick={onCancel}
-        className="absolute top-8 left-8 z-[60] w-12 h-12 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-all shadow-xl active:scale-90"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+    <div className={`relative flex flex-col items-center w-full transition-all duration-500 ${isRemote ? 'h-screen w-screen max-w-none' : 'liquid-glass p-2.5 max-w-lg aspect-[9/16] rounded-[48px]'} overflow-hidden`}>
+      <div className={`relative w-full h-full overflow-hidden bg-[#2b241e] ${isRemote ? '' : 'rounded-[38px]'}`}>
+        {/* Back Button */}
+        <button
+          onClick={onCancel}
+          className="absolute top-6 left-6 z-[60] w-11 h-11 rounded-full bg-[#2b241e]/65 border border-white/25 backdrop-blur-md flex items-center justify-center text-white active:scale-95"
+          aria-label="Back"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="h-full w-full object-cover transform scale-x-[-1]"
-      />
-      <canvas ref={canvasRef} className="hidden" />
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover transform scale-x-[-1]"
+        />
+        <canvas ref={canvasRef} className="hidden" />
 
-      {/* Overlays */}
-      <div className="absolute inset-0 flex flex-col items-center justify-between p-10 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none">
-        <div className="w-full text-center mt-12">
-          <h2 className="text-white text-3xl md:text-4xl font-black drop-shadow-2xl italic tracking-tighter uppercase leading-none">Photo Ops</h2>
-          <p className="text-white/50 text-[10px] font-black uppercase tracking-[0.4em] mt-3">Personal Souvenir</p>
-        </div>
-
-        {countdown !== null && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[6px] z-50">
-            <span className="text-white text-[12rem] md:text-[16rem] font-black drop-shadow-2xl animate-ping">
-              {countdown === 0 ? "📸" : countdown}
-            </span>
+        {/* Overlays over video scrim */}
+        <div className="absolute inset-0 flex flex-col items-center justify-between p-8 bg-gradient-to-b from-black/55 via-transparent to-black/75 pointer-events-none">
+          <div className="w-full text-center mt-10">
+            <h2 className="text-white text-3xl font-extrabold tracking-tight drop-shadow-lg leading-none">Photo Souvenir</h2>
+            <p className="text-white/85 text-xs font-medium mt-2">Tap the shutter when ready</p>
           </div>
-        )}
 
-        <div className="flex flex-col items-center gap-10 w-full mb-10 pointer-events-auto">
-          <button
-            onClick={startPhotoSequence}
-            className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-90 transition-all group border-[8px] border-white/20"
-          >
-            <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.103-1.103A2 2 0 0011.188 3H8.812a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-              </svg>
+          {countdown !== null && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50">
+              <span className="text-white text-[10rem] md:text-[13rem] font-extrabold drop-shadow-2xl animate-ping tabular-nums">
+                {countdown === 0 ? "📸" : countdown}
+              </span>
             </div>
-          </button>
-          
-          <button onClick={onCancel} className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors">
-            Exit & Return
-          </button>
+          )}
+
+          <div className="flex flex-col items-center gap-6 w-full mb-4 pointer-events-auto">
+            <button
+              onClick={startPhotoSequence}
+              className="bg-white/25 border border-white/40 backdrop-blur-md w-24 h-24 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-transform shadow-2xl"
+              aria-label="Take Photo"
+            >
+              <div className="liquid-cta w-16 h-16 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#f7f3ec]" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.103-1.103A2 2 0 0011.188 3H8.812a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </button>
+
+            <div className="flex items-center gap-3">
+              {onSkip && (
+                <button onClick={onSkip} className="bg-[#2b241e]/65 border border-white/25 backdrop-blur-md px-5 py-2.5 rounded-full text-white text-xs font-semibold hover:bg-[#2b241e]/80">
+                  Skip Photo
+                </button>
+              )}
+              <button onClick={onCancel} className="bg-[#2b241e]/65 border border-white/25 backdrop-blur-md px-5 py-2.5 rounded-full text-white/90 hover:text-white text-xs font-medium">
+                Back
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

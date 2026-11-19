@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { Review } from '../types.ts';
 
@@ -41,14 +40,13 @@ const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) =>
     setLoading(true);
     setError(null);
     try {
-      // Clean up URL: remove trailing slash if exists
       const baseUrl = PHOTOPRISM_URL.replace(/\/$/, '');
       const res = await fetch(`${baseUrl}/api/v1/photos?s=${faceId}&count=100&order=newest`, {
         headers: { 'X-Auth-Token': PHOTOPRISM_API_KEY }
       });
-      
+
       if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-      
+
       const data = await res.json();
       setPhotoPrismImages(data || []);
     } catch (err: any) {
@@ -65,40 +63,33 @@ const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) =>
 
   const personName = useMemo(() => {
     const r = reviews.find(r => r.face_id === faceId);
-    return r?.name || "Expo Visitor";
+    return r?.name || "EDEX Visitor";
   }, [reviews, faceId]);
 
   const baseUrl = PHOTOPRISM_URL.replace(/\/$/, '');
 
   return (
-    <div className="fixed inset-0 bg-black z-[100] flex flex-col animate-fade-in text-white overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.05] overflow-hidden">
-         <div className="absolute top-[-10%] right-[-10%] w-[800px] h-[800px] border border-white rounded-full"></div>
-         <div className="absolute bottom-[-20%] left-[-20%] w-[600px] h-[600px] border-2 border-white/50 rounded-full"></div>
-      </div>
-
-      <header className="relative z-10 px-8 py-10 flex items-center justify-between border-b border-white/5 backdrop-blur-md">
-        <button onClick={onBack} className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group">
-          <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-white group-hover:text-black transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">BACK</span>
+    <div className="fixed inset-0 z-[100] flex flex-col animate-fade-in text-[#2b241e] overflow-hidden">
+      <header className="liquid-glass-bar relative z-10 px-6 md:px-10 py-5 flex items-center justify-between">
+        <button onClick={onBack} className="liquid-glass-subtle flex items-center gap-2.5 px-4 py-2.5 rounded-full text-[#2b241e]">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-semibold">Back</span>
         </button>
 
-        <div className="text-center">
-          <h2 className="text-2xl font-black tracking-tighter italic uppercase leading-none">{personName}</h2>
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">
-            {loading ? 'SCANNING ENGINE...' : `SOUVENIR HISTORY • ${photoPrismImages.length} PHOTOS`}
+        <div className="text-center min-w-0 px-4">
+          <h2 className="text-xl font-bold tracking-tight text-[#2b241e] truncate">{personName}</h2>
+          <p className="text-xs text-[#5c5147] font-medium mt-0.5 tabular-nums">
+            {loading ? 'Scanning archive...' : `Souvenir History · ${photoPrismImages.length} photos`}
           </p>
         </div>
 
-        <button 
+        <button
           onClick={fetchHistory}
           disabled={loading}
-          className={`w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/20 transition-all ${loading ? 'animate-spin opacity-50' : ''}`}
+          className={`liquid-glass-subtle w-11 h-11 rounded-full flex items-center justify-center text-[#2b241e] ${loading ? 'animate-spin opacity-50' : ''}`}
+          aria-label="Refresh Gallery"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -106,31 +97,32 @@ const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) =>
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-8 no-scrollbar relative z-10">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 no-scrollbar relative z-10">
         {loading && photoPrismImages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-6">
-            <div className="w-12 h-12 border-2 border-white/10 border-t-white rounded-full animate-spin"></div>
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Consulting AI Archive</p>
+          <div className="h-full flex flex-col items-center justify-center gap-4">
+            <div className="w-12 h-12 border-2 border-[#312922]/20 border-t-[#312922] rounded-full animate-spin"></div>
+            <p className="text-xs font-medium text-[#5c5147]">Loading your souvenir archive</p>
           </div>
         ) : photoPrismImages.length > 0 ? (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 max-w-6xl mx-auto pb-32">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 max-w-6xl mx-auto pb-24">
             {photoPrismImages.map((photo, i) => (
-              <div 
-                key={photo.ID || photo.Hash} 
-                className="break-inside-avoid mb-6 rounded-[32px] overflow-hidden bg-white/5 border border-white/10 shadow-2xl group animate-fade-in-up"
-                style={{ animationDelay: `${i * 100}ms` }}
+              <div
+                key={photo.ID || photo.Hash}
+                className="liquid-glass break-inside-avoid mb-6 rounded-[28px] overflow-hidden group animate-fade-in-up p-2"
+                style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="relative aspect-auto">
-                  <img 
-                    src={`${baseUrl}/api/v1/t/${photo.Hash}/fit_2048?t=${PHOTOPRISM_API_KEY}`} 
-                    alt="Expo Memory" 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                <div className="relative rounded-[20px] overflow-hidden">
+                  <img
+                    src={`${baseUrl}/api/v1/t/${photo.Hash}/fit_2048?t=${PHOTOPRISM_API_KEY}`}
+                    alt="EDEX Memory"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
-                  <div className="absolute bottom-6 left-6 right-6">
-                     <p className="text-[9px] font-black text-white uppercase tracking-widest">{photo.TakenAt ? new Date(photo.TakenAt).toLocaleDateString() : 'EXPO MEMORY'}</p>
-                     <p className="text-[7px] font-bold text-white/40 uppercase tracking-[0.2em] mt-1">{photo.CameraModel || 'PHOTO OPS'}</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <p className="text-xs font-semibold text-white">{photo.TakenAt ? new Date(photo.TakenAt).toLocaleDateString() : 'EDEX IISJ Memory'}</p>
+                    <p className="text-xs text-white/75 mt-0.5">{photo.CameraModel || 'Photo Souvenir'}</p>
                   </div>
                 </div>
               </div>
@@ -138,28 +130,29 @@ const GalleryView: React.FC<GalleryViewProps> = ({ faceId, reviews, onBack }) =>
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto">
-             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center border border-white/10 mb-8">
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-               </svg>
-             </div>
-             <h3 className="text-white text-lg font-black uppercase tracking-[0.2em] mb-4">No Memories Found Yet</h3>
-             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed mb-8">
-               Our AI is still processing your face signature. It can take a few minutes for the gallery to sync across the expo network.
-             </p>
-             <button 
-               onClick={fetchHistory}
-               className="px-10 py-5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all"
-             >
-                REFRESH GALLERY
-             </button>
-             {faceId && <p className="text-[7px] text-slate-800 uppercase mt-8 tracking-widest font-mono">ID: {faceId}</p>}
+            <div className="liquid-glass p-8 rounded-[36px] flex flex-col items-center">
+              <div className="liquid-glass-subtle w-16 h-16 rounded-2xl flex items-center justify-center mb-5 text-[#2b241e]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-[#2b241e] text-lg font-bold mb-2">No Memories Found Yet</h3>
+              <p className="text-[#5c5147] text-xs leading-relaxed mb-6">
+                {error ? 'Unable to load archive right now. Please try refreshing.' : 'Your photos may still be indexing. Check back in a moment to view your EDEX IISJ gallery.'}
+              </p>
+              <button
+                onClick={fetchHistory}
+                className="liquid-cta px-8 py-3.5 rounded-full text-xs font-bold active:scale-[0.98]"
+              >
+                Refresh Gallery
+              </button>
+            </div>
           </div>
         )}
       </main>
 
-      <footer className="relative z-10 px-8 py-8 border-t border-white/5 bg-black/80 backdrop-blur-xl flex justify-center">
-         <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.4em]">SOUVENIR EXPERIENCE • REVIEW APP</p>
+      <footer className="relative z-10 px-6 py-4 border-t border-[#312922]/12 text-center">
+        <p className="text-xs font-medium text-[#5c5147]">EDEX Educational Exhibition · IISJ</p>
       </footer>
     </div>
   );

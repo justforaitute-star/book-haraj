@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Review, DetailedRatings, AppConfig, RatingCategory, BackgroundConfig } from '../types.ts';
+import { Review, AppConfig, RatingCategory, BackgroundConfig } from '../types.ts';
 import { supabase } from '../lib/supabase.ts';
 
 interface AdminPanelProps {
@@ -93,13 +92,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
       const { error } = await supabase.storage.from('photos').upload(fileName, file);
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(fileName);
-      
-      setLocalConfig(prev => ({ 
-        ...prev, 
-        [type === 'logo' ? 'logo_url' : 'background_url']: publicUrl 
+
+      setLocalConfig(prev => ({
+        ...prev,
+        [type === 'logo' ? 'logo_url' : 'background_url']: publicUrl
       }));
-      
-      alert(`${type.toUpperCase()} uploaded successfully. Please click 'COMMIT GLOBAL CONFIG' below to save.`);
+
+      alert(`${type.toUpperCase()} uploaded successfully. Please click 'Save Global Configuration' below to save.`);
     } catch (err: any) {
       alert(`${type.toUpperCase()} upload failed: ${err.message}.`);
     } finally {
@@ -109,14 +108,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
 
   const handleDeleteAsset = (type: 'logo' | 'bg') => {
     if (!confirm(`Are you sure you want to remove the station ${type === 'logo' ? 'logo' : 'backdrop'}?`)) return;
-    
-    setLocalConfig(prev => ({ 
-      ...prev, 
-      [type === 'logo' ? 'logo_url' : 'background_url']: '' 
+
+    setLocalConfig(prev => ({
+      ...prev,
+      [type === 'logo' ? 'logo_url' : 'background_url']: ''
     }));
-    
+
     if (type === 'bg') setShowPlacementEditor(false);
-    alert(`${type.toUpperCase()} marked for removal. Click 'COMMIT GLOBAL CONFIG' to apply changes.`);
+    alert(`${type.toUpperCase()} marked for removal. Click 'Save Global Configuration' to apply changes.`);
   };
 
   const handleSaveConfig = async () => {
@@ -131,7 +130,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
         categories: localConfig.categories,
         face_id_enabled: localConfig.face_id_enabled
       });
-      
+
       if (error) throw error;
       alert("Global configuration applied successfully.");
       onUpdate();
@@ -162,7 +161,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
     const newCat: RatingCategory = {
       id: newId,
       label: 'New Category',
-      question: 'How was this part of the expo?'
+      question: 'How was this part of EDEX?'
     };
     setLocalConfig(prev => ({ ...prev, categories: [...prev.categories, newCat] }));
   };
@@ -184,299 +183,317 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ reviews, config, onBack, onUpda
   const bgConfig = localConfig.background_config || { zoom: 1, x: 0, y: 0, blur: 0 };
 
   return (
-    <div className="h-full w-full bg-black flex flex-col items-center p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100]">
-      <header className="w-full max-w-4xl flex items-center justify-between mb-12 shrink-0">
-        <button onClick={onBack} className="flex items-center gap-3 text-slate-500 hover:text-white transition-all">
-          <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">STATION EXIT</span>
+    <div className="h-full w-full flex flex-col items-center p-6 md:p-8 animate-fade-in overflow-y-auto no-scrollbar relative z-[100] text-[#2b241e]">
+      <header className="w-full max-w-4xl flex items-center justify-between mb-8 shrink-0">
+        <button onClick={onBack} className="liquid-glass-subtle flex items-center gap-2.5 px-4 py-2.5 rounded-full text-[#2b241e]">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-semibold">Exit Admin</span>
         </button>
         <div className="text-center">
-          <h2 className="text-4xl font-black italic tracking-tighter uppercase">ADMIN PANEL</h2>
-          <p className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em] mt-1">Management Engine</p>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#2b241e]">Admin Panel</h2>
+          <p className="text-xs text-[#5c5147] font-medium mt-0.5">EDEX IISJ Management</p>
         </div>
-        <div className="w-24"></div>
+        <div className="w-24 hidden sm:block"></div>
       </header>
 
-      <div className="flex bg-white/5 p-2 rounded-[24px] mb-12 border border-white/10 w-full max-w-md shadow-2xl shrink-0">
-        <button 
+      <div className="liquid-glass flex p-1.5 rounded-full mb-8 w-full max-w-md shrink-0">
+        <button
           onClick={() => setActiveTab('REVIEWS')}
-          className={`flex-1 py-4 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'REVIEWS' ? 'bg-white text-black shadow-xl' : 'text-slate-500'}`}
+          className={`flex-1 py-3 rounded-full text-xs font-bold transition-all ${activeTab === 'REVIEWS' ? 'liquid-cta' : 'text-[#5c5147] hover:text-[#2b241e]'}`}
         >
-          REVIEWS
+          Reviews
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('CONFIG')}
-          className={`flex-1 py-4 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'CONFIG' ? 'bg-white text-black shadow-xl' : 'text-slate-500'}`}
+          className={`flex-1 py-3 rounded-full text-xs font-bold transition-all ${activeTab === 'CONFIG' ? 'liquid-cta' : 'text-[#5c5147] hover:text-[#2b241e]'}`}
         >
-          STATION
+          Station Config
         </button>
       </div>
 
-      <div className="w-full max-w-2xl space-y-10 pb-40">
+      <div className="w-full max-w-2xl space-y-6 pb-28">
         {activeTab === 'REVIEWS' ? (
           <>
-            <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl">
-              <h3 className="text-[11px] font-black text-white/30 uppercase tracking-[0.5em] mb-6">Search Station Registry</h3>
-              <input 
-                type="text" 
-                placeholder="TYPE SERIAL OR UUID" 
+            <div className="liquid-glass rounded-[32px] p-7">
+              <h3 className="text-xs font-semibold text-[#5c5147] mb-4">Search Station Registry</h3>
+              <input
+                type="text"
+                placeholder="Type serial number or UUID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-black/40 border-b border-white/10 py-6 text-center text-2xl font-black uppercase tracking-[0.3em] focus:border-white transition-all outline-none text-white rounded-2xl"
+                className="w-full bg-white/60 border border-[#312922]/20 py-4 px-5 text-center text-lg font-semibold focus:border-[#312922] transition-all outline-none text-[#2b241e] rounded-2xl placeholder:text-[#6e6256]/70"
               />
             </div>
 
             {foundReview && !editingReview && (
-              <div className="bg-white/5 border border-white/10 rounded-[48px] p-12 animate-fade-in-up">
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
-                  <img src={foundReview.photo} className="w-48 h-60 object-cover rounded-3xl border border-white/10 shadow-2xl" />
-                  <div className="flex-1 text-center md:text-left">
-                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">SERIAL {foundReview.serial_number}</p>
-                    <h4 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">{foundReview.name}</h4>
-                    
-                    {/* Detailed Ratings Breakdown */}
-                    <div className="mb-8 space-y-2 bg-black/20 p-6 rounded-3xl border border-white/5">
-                      <h5 className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-3">Rating Breakdown</h5>
+              <div className="liquid-glass rounded-[36px] p-8 animate-fade-in-up">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-7">
+                  {foundReview.photo ? (
+                    <img src={foundReview.photo} alt={foundReview.name} referrerPolicy="no-referrer" className="w-40 h-52 object-cover rounded-2xl border border-[#312922]/15 shadow-lg" />
+                  ) : (
+                    <div className="w-40 h-52 rounded-2xl bg-[#312922]/10 flex items-center justify-center text-[#5c5147] text-xs font-medium">No Photo</div>
+                  )}
+                  <div className="flex-1 text-center md:text-left min-w-0">
+                    <p className="text-xs text-[#5c5147] font-medium mb-1 tabular-nums">Serial #{foundReview.serial_number ?? '—'}</p>
+                    <h4 className="text-2xl font-bold text-[#2b241e] mb-4 truncate">{foundReview.name}</h4>
+
+                    <div className="mb-5 divide-y divide-[#312922]/12 border-y border-[#312922]/12 py-2">
                       {localConfig.categories.map(cat => (
-                        <div key={cat.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{cat.label}</span>
-                          <div className="flex gap-1">
+                        <div key={cat.id} className="flex justify-between items-center py-2">
+                          <span className="text-xs text-[#5c5147] font-medium">{cat.label}</span>
+                          <div className="flex gap-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <span key={i} className={`text-xs ${i < (foundReview.ratings?.[cat.id] || 0) ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
+                              <span key={i} className={`text-sm ${i < (foundReview.ratings?.[cat.id] || 0) ? 'text-[#b68928]' : 'text-[#312922]/20'}`}>★</span>
                             ))}
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <p className="text-white/60 text-lg leading-relaxed italic mb-10">"{foundReview.comment || 'No comment provided.'}"</p>
-                    
-                    <div className="flex gap-4">
-                      <button onClick={() => handleEdit(foundReview)} className="flex-1 py-5 bg-white text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-all shadow-xl">EDIT</button>
-                      <button onClick={() => handleDelete(foundReview.id)} className="flex-1 py-5 bg-red-600/10 text-red-500 border border-red-500/20 font-black text-xs uppercase tracking-widest rounded-2xl">REMOVE</button>
+                    <p className="text-[#2b241e] text-base leading-relaxed italic mb-6">"{foundReview.comment || 'No comment provided.'}"</p>
+
+                    <div className="flex gap-3">
+                      <button onClick={() => handleEdit(foundReview)} className="liquid-cta flex-1 py-3.5 font-bold text-xs rounded-full">Edit</button>
+                      <button onClick={() => handleDelete(foundReview.id)} className="liquid-glass-subtle flex-1 py-3.5 text-[#9f2d2d] font-bold text-xs rounded-full">Remove</button>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
+            {editingReview && (
+              <div className="liquid-glass rounded-[36px] p-8 space-y-5 animate-fade-in-up">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-bold text-[#2b241e]">Edit Review</h4>
+                  <button onClick={() => setEditingReview(null)} className="text-xs font-semibold text-[#5c5147] hover:text-[#2b241e]">Cancel</button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#5c5147] mb-1.5">Visitor Name</label>
+                    <input
+                      type="text"
+                      value={editingReview.name}
+                      onChange={(e) => setEditingReview({ ...editingReview, name: e.target.value })}
+                      className="w-full bg-white/60 border border-[#312922]/20 rounded-2xl px-4 py-3 text-sm text-[#2b241e] font-medium outline-none focus:border-[#312922]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#5c5147] mb-1.5">Comment</label>
+                    <textarea
+                      rows={3}
+                      value={editingReview.comment}
+                      onChange={(e) => setEditingReview({ ...editingReview, comment: e.target.value })}
+                      className="w-full bg-white/60 border border-[#312922]/20 rounded-2xl px-4 py-3 text-sm text-[#2b241e] font-medium outline-none focus:border-[#312922] resize-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setEditingReview(null)} className="liquid-glass-subtle flex-1 py-3.5 rounded-full text-xs font-semibold text-[#2b241e]">Cancel</button>
+                  <button onClick={handleUpdateReview} disabled={isProcessing} className="liquid-cta flex-1 py-3.5 rounded-full text-xs font-bold">
+                    {isProcessing ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         ) : (
-          <div className="space-y-12 animate-fade-in-up">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
-                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-8">STATION LOGO</h3>
-                <div className="w-32 h-32 bg-black rounded-3xl border border-white/10 flex items-center justify-center p-4 overflow-hidden mb-8 group relative">
-                   {localConfig.logo_url ? (
-                     <img src={localConfig.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
-                   ) : (
-                     <div className="text-[10px] text-slate-700 font-black">NO ASSET</div>
-                   )}
+          <div className="space-y-6 animate-fade-in-up">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="liquid-glass rounded-[32px] p-7 flex flex-col items-center">
+                <h3 className="text-xs font-semibold text-[#5c5147] mb-5">Station Logo</h3>
+                <div className="w-28 h-28 bg-white/50 rounded-2xl border border-[#312922]/15 flex items-center justify-center p-4 overflow-hidden mb-6">
+                  {localConfig.logo_url ? (
+                    <img src={localConfig.logo_url} alt="Logo" referrerPolicy="no-referrer" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <div className="text-xs text-[#5c5147] font-medium">No logo</div>
+                  )}
                 </div>
                 <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} ref={logoInputRef} className="hidden" />
                 <div className="flex flex-col w-full gap-2">
-                  <button onClick={() => logoInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD</button>
+                  <button onClick={() => logoInputRef.current?.click()} className="liquid-glass-subtle w-full py-3.5 text-[#2b241e] rounded-full text-xs font-semibold">Upload Logo</button>
                   {localConfig.logo_url && (
-                    <button onClick={() => handleDeleteAsset('logo')} className="w-full py-4 bg-red-500/10 text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">REMOVE LOGO</button>
+                    <button onClick={() => handleDeleteAsset('logo')} className="liquid-glass-subtle w-full py-3.5 text-[#9f2d2d] rounded-full text-xs font-bold">Remove Logo</button>
                   )}
                 </div>
               </div>
 
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col items-center">
-                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-8">STATION BACKDROP</h3>
-                <div className="w-32 h-32 bg-black rounded-3xl border border-white/10 flex items-center justify-center p-4 overflow-hidden mb-8 group relative">
-                   {localConfig.background_url ? (
-                     <img src={localConfig.background_url} alt="BG" className="max-w-full max-h-full object-cover rounded-lg" />
-                   ) : (
-                     <div className="text-[10px] text-slate-700 font-black">NO ASSET</div>
-                   )}
+              <div className="liquid-glass rounded-[32px] p-7 flex flex-col items-center">
+                <h3 className="text-xs font-semibold text-[#5c5147] mb-5">Station Backdrop</h3>
+                <div className="w-28 h-28 bg-white/50 rounded-2xl border border-[#312922]/15 flex items-center justify-center p-2 overflow-hidden mb-6">
+                  {localConfig.background_url ? (
+                    <img src={localConfig.background_url} alt="Backdrop" referrerPolicy="no-referrer" className="w-full h-full object-cover rounded-xl" />
+                  ) : (
+                    <div className="text-xs text-[#5c5147] font-medium">No backdrop</div>
+                  )}
                 </div>
                 <div className="flex flex-col w-full gap-2">
                   <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'bg')} ref={bgInputRef} className="hidden" />
-                  <button onClick={() => bgInputRef.current?.click()} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">UPLOAD NEW</button>
+                  <button onClick={() => bgInputRef.current?.click()} className="liquid-glass-subtle w-full py-3.5 text-[#2b241e] rounded-full text-xs font-semibold">Upload Backdrop</button>
                   {localConfig.background_url && (
                     <>
-                      <button 
-                        onClick={() => setShowPlacementEditor(!showPlacementEditor)} 
-                        className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${showPlacementEditor ? 'bg-white text-black border-white' : 'bg-white/5 text-white/60 border-white/10 hover:text-white'}`}
+                      <button
+                        onClick={() => setShowPlacementEditor(!showPlacementEditor)}
+                        className={`w-full py-3.5 rounded-full text-xs font-semibold ${showPlacementEditor ? 'liquid-cta' : 'liquid-glass-subtle text-[#2b241e]'}`}
                       >
-                        {showPlacementEditor ? 'CLOSE PLACEMENT' : 'EDIT PLACEMENT'}
+                        {showPlacementEditor ? 'Close Placement' : 'Edit Placement'}
                       </button>
-                      <button onClick={() => handleDeleteAsset('bg')} className="w-full py-4 bg-red-500/10 text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">REMOVE BACKDROP</button>
+                      <button onClick={() => handleDeleteAsset('bg')} className="liquid-glass-subtle w-full py-3.5 text-[#9f2d2d] rounded-full text-xs font-bold">Remove Backdrop</button>
                     </>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl flex items-center justify-between">
-                <div>
-                  <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Recognition Engine</h3>
-                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Facial grouping for visitors</p>
-                </div>
-                <button 
-                  onClick={toggleFaceId}
-                  className={`w-20 h-10 rounded-full p-1 transition-colors duration-500 ${localConfig.face_id_enabled ? 'bg-white' : 'bg-white/10'}`}
-                >
-                  <div className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-500 ${localConfig.face_id_enabled ? 'translate-x-10 bg-black' : 'translate-x-0 bg-white/20'}`}></div>
-                </button>
+            <div className="liquid-glass rounded-[32px] p-7 flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#2b241e]">Photo & Recognition Engine</h3>
+                <p className="text-xs text-[#5c5147] mt-0.5">Capture souvenir photos and facial grouping</p>
               </div>
+              <button
+                onClick={toggleFaceId}
+                className={`w-16 h-9 rounded-full p-1 transition-colors duration-300 shrink-0 ${localConfig.face_id_enabled ? 'bg-[#312922]' : 'bg-[#312922]/20'}`}
+                aria-label="Toggle Recognition Engine"
+              >
+                <div className={`w-7 h-7 rounded-full shadow-md transition-transform duration-300 ${localConfig.face_id_enabled ? 'translate-x-7 bg-[#f7f3ec]' : 'translate-x-0 bg-white'}`}></div>
+              </button>
             </div>
 
             {showPlacementEditor && localConfig.background_url && (
-              <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl animate-fade-in-up space-y-10">
-                <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] flex items-center gap-4">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                  Backdrop Tuning
-                </h3>
+              <div className="liquid-glass rounded-[32px] p-7 animate-fade-in-up space-y-6">
+                <h3 className="text-sm font-bold text-[#2b241e]">Backdrop Tuning</h3>
 
-                <div className="relative w-full aspect-video bg-black rounded-3xl border-4 border-white/20 overflow-hidden shadow-2xl">
-                   <div className="absolute inset-0 pointer-events-none z-10">
-                      <div className="absolute inset-x-0 bottom-4 flex justify-center">
-                        <div className="w-1/2 h-4 bg-white/20 rounded-full blur-[2px]"></div>
-                      </div>
-                      <div className="absolute top-4 inset-x-0 flex justify-center">
-                        <div className="w-1/3 h-6 border-2 border-white/10 rounded-lg blur-[1px]"></div>
-                      </div>
-                   </div>
-                   
-                   <img 
-                      src={localConfig.background_url} 
-                      alt="Preview Mirror"
-                      className="w-full h-full object-cover origin-center transition-all duration-300"
-                      style={{
-                        transform: `scale(${bgConfig.zoom}) translate(${bgConfig.x}%, ${bgConfig.y}%)`,
-                        filter: `blur(${bgConfig.blur}px)`
-                      }}
-                   />
+                <div className="relative w-full aspect-video bg-[#2b241e]/10 rounded-2xl border border-[#312922]/15 overflow-hidden">
+                  <img
+                    src={localConfig.background_url}
+                    alt="Preview Mirror"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover origin-center transition-all duration-300"
+                    style={{
+                      transform: `scale(${bgConfig.zoom}) translate(${bgConfig.x}%, ${bgConfig.y}%)`,
+                      filter: `blur(${bgConfig.blur}px)`
+                    }}
+                  />
                 </div>
-                
-                <div className="space-y-8">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digital Zoom</label>
-                       <span className="text-xs font-mono font-bold text-white">{bgConfig.zoom.toFixed(1)}x</span>
+
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="text-[#5c5147] font-medium">Digital Zoom</label>
+                      <span className="font-mono font-semibold text-[#2b241e] tabular-nums">{bgConfig.zoom.toFixed(1)}x</span>
                     </div>
-                    <input 
+                    <input
                       type="range" min="1" max="5" step="0.1"
                       value={bgConfig.zoom}
                       onChange={(e) => updateBgConfig('zoom', parseFloat(e.target.value))}
-                      className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                      className="w-full accent-[#312922] h-1.5 bg-[#312922]/15 rounded-full appearance-none cursor-pointer"
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Horizontal Offset</label>
-                         <span className="text-xs font-mono font-bold text-white">{bgConfig.x}%</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <label className="text-[#5c5147] font-medium">Horizontal Offset</label>
+                        <span className="font-mono font-semibold text-[#2b241e] tabular-nums">{bgConfig.x}%</span>
                       </div>
-                      <input 
+                      <input
                         type="range" min="-100" max="100" step="1"
                         value={bgConfig.x}
                         onChange={(e) => updateBgConfig('x', parseInt(e.target.value))}
-                        className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                        className="w-full accent-[#312922] h-1.5 bg-[#312922]/15 rounded-full appearance-none cursor-pointer"
                       />
                     </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vertical Offset</label>
-                         <span className="text-xs font-mono font-bold text-white">{bgConfig.y}%</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <label className="text-[#5c5147] font-medium">Vertical Offset</label>
+                        <span className="font-mono font-semibold text-[#2b241e] tabular-nums">{bgConfig.y}%</span>
                       </div>
-                      <input 
+                      <input
                         type="range" min="-100" max="100" step="1"
                         value={bgConfig.y}
                         onChange={(e) => updateBgConfig('y', parseInt(e.target.value))}
-                        className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                        className="w-full accent-[#312922] h-1.5 bg-[#312922]/15 rounded-full appearance-none cursor-pointer"
                       />
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Atmospheric Blur</label>
-                       <span className="text-xs font-mono font-bold text-white">{bgConfig.blur}px</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="text-[#5c5147] font-medium">Atmospheric Blur</label>
+                      <span className="font-mono font-semibold text-[#2b241e] tabular-nums">{bgConfig.blur}px</span>
                     </div>
-                    <input 
+                    <input
                       type="range" min="0" max="100" step="1"
                       value={bgConfig.blur}
                       onChange={(e) => updateBgConfig('blur', parseInt(e.target.value))}
-                      className="w-full accent-white h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                      className="w-full accent-[#312922] h-1.5 bg-[#312922]/15 rounded-full appearance-none cursor-pointer"
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="bg-white/5 border border-white/10 rounded-[40px] p-10 backdrop-blur-3xl shadow-2xl">
-              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.5em] mb-10 flex items-center gap-4">
-                <div className="w-2 h-2 bg-white rounded-full"></div>
-                Review Configuration
-              </h3>
-              <div className="space-y-8">
+            <div className="liquid-glass rounded-[32px] p-7">
+              <h3 className="text-sm font-bold text-[#2b241e] mb-6">Review Questions</h3>
+              <div className="divide-y divide-[#312922]/12">
                 {localConfig.categories.map((cat, idx) => (
-                  <div key={cat.id} className="p-8 bg-black/40 rounded-3xl border border-white/5 space-y-6 relative group/cat">
-                    <button 
-                      onClick={() => removeCategory(idx)}
-                      className="absolute top-6 right-6 w-8 h-8 bg-red-600/10 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/cat:opacity-100 transition-opacity border border-red-500/20"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                  <div key={cat.id} className="py-5 first:pt-0 space-y-4 relative">
                     <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">QUESTION SLOT {idx + 1}</span>
+                      <span className="text-xs font-semibold text-[#5c5147]">Question {idx + 1}</span>
+                      <button
+                        onClick={() => removeCategory(idx)}
+                        className="text-xs font-semibold text-[#9f2d2d] hover:text-[#7f1d1d] px-2 py-1"
+                      >
+                        Remove
+                      </button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Category Label</label>
-                        <input 
-                          type="text" 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-[#5c5147]">Category Label</label>
+                        <input
+                          type="text"
                           value={cat.label}
                           onChange={(e) => updateCategory(idx, 'label', e.target.value)}
-                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white font-bold outline-none"
+                          className="w-full bg-white/60 border border-[#312922]/20 rounded-xl p-3 text-xs text-[#2b241e] font-semibold outline-none focus:border-[#312922]"
                         />
                       </div>
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Visitor Question</label>
-                        <input 
-                          type="text" 
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-[#5c5147]">Visitor Question</label>
+                        <input
+                          type="text"
                           value={cat.question}
                           onChange={(e) => updateCategory(idx, 'question', e.target.value)}
-                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white font-bold outline-none"
+                          className="w-full bg-white/60 border border-[#312922]/20 rounded-xl p-3 text-xs text-[#2b241e] font-semibold outline-none focus:border-[#312922]"
                         />
                       </div>
                     </div>
                   </div>
                 ))}
-
-                <button 
-                  onClick={addCategory}
-                  className="w-full py-6 bg-white/5 border border-dashed border-white/20 rounded-3xl text-[10px] font-black text-white uppercase tracking-[0.4em] hover:bg-white/10 hover:border-white/40 transition-all flex items-center justify-center gap-3"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-                  </svg>
-                  ADD NEW QUESTION
-                </button>
               </div>
+
+              <button
+                onClick={addCategory}
+                className="liquid-glass-subtle w-full py-4 mt-4 rounded-full text-xs font-semibold text-[#2b241e] flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                Add New Question
+              </button>
             </div>
 
-            <button 
+            <button
               onClick={handleSaveConfig}
               disabled={isProcessing}
-              className="w-full py-8 bg-white text-black rounded-[32px] font-black text-sm uppercase tracking-[0.6em] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15)] hover:scale-[1.02] active:scale-95 transition-all shrink-0"
+              className="liquid-cta w-full py-4 rounded-full font-bold text-sm active:scale-[0.98] shrink-0"
             >
-              {isProcessing ? 'SYNCHRONIZING...' : 'COMMIT GLOBAL CONFIG'}
+              {isProcessing ? 'Synchronizing...' : 'Save Global Configuration'}
             </button>
           </div>
         )}
       </div>
 
-      <footer className="mt-auto py-12 text-center border-t border-white/5 w-full max-w-4xl opacity-20 shrink-0">
-        <p className="text-[10px] font-black text-white uppercase tracking-[1.5em]">REVIEW APP MANAGEMENT</p>
+      <footer className="mt-auto py-6 text-center text-xs font-medium text-[#5c5147] w-full max-w-4xl shrink-0">
+        EDEX IISJ · Management
       </footer>
     </div>
   );

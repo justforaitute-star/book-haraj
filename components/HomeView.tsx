@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { Review, RatingCategory } from '../types.ts';
 
@@ -12,14 +11,15 @@ interface HomeViewProps {
   faceIdEnabled?: boolean;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onToggleMode, onAdmin, onRefresh, faceIdEnabled = true }) => {
+const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onToggleMode, onAdmin, onRefresh }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [showOverallStats, setShowOverallStats] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrCopied, setQrCopied] = useState(false);
   const [qrTick, setQrTick] = useState(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Sync fullscreen state with browser events
   useEffect(() => {
     const handleFsChange = () => {
       setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
@@ -49,11 +49,9 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
     }
   };
 
-  // Improved Prestige Rating Calculation
   const stats = useMemo(() => {
     if (reviews.length === 0) return { avg: "4.8", count: 0, recent: [], categoryAverages: {} };
-    
-    // Global Star Logic: Sum of all stars / total ratings count
+
     let totalStars = 0;
     let totalRatingCount = 0;
     const catSums: Record<string, number> = {};
@@ -71,25 +69,21 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
       });
     });
 
-    // Baseline "Expo Hype" weight: Add 50 'ghost' 5-star ratings to maintain prestige
     const weightStars = totalStars + (50 * 5);
     const weightCount = totalRatingCount + 50;
-    
-    let rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
+
+    const rawAvg = weightCount > 0 ? weightStars / weightCount : 4.8;
     const finalAvg = Math.max(4.4, rawAvg).toFixed(1);
 
-    // Calculate per-category averages for the "Overall" tab
     const categoryAverages: Record<string, string> = {};
     categories.forEach(cat => {
       const sum = catSums[cat.id] || 0;
       const count = catCounts[cat.id] || 0;
-      // Also apply slight hype weight to individual categories for consistency
       const wSum = sum + (5 * 5);
       const wCount = count + 5;
       categoryAverages[cat.id] = (wSum / wCount).toFixed(1);
     });
 
-    // Get 5 most recent valid comments for the ticker
     const recentComments = reviews
       .filter(r => r.comment && r.comment.trim().length > 0)
       .slice(0, 5)
@@ -117,210 +111,260 @@ const HomeView: React.FC<HomeViewProps> = ({ reviews, categories, onStart, onTog
   };
 
   const remoteUrl = useMemo(() => {
-    const url = new URL(window.location.href);
+    const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('mode', 'remote');
     return url.toString();
   }, []);
 
   const qrCodeUrl = useMemo(() => {
     const dynamicUrl = `${remoteUrl}${remoteUrl.includes('?') ? '&' : '?'}salt=${qrTick}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(dynamicUrl)}&bgcolor=000000&color=ffffff`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=360x360&data=${encodeURIComponent(dynamicUrl)}&bgcolor=ffffff&color=2b241e&margin=2`;
   }, [remoteUrl, qrTick]);
 
+  const handleCopyRemoteUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(remoteUrl);
+      setQrCopied(true);
+      setTimeout(() => setQrCopied(false), 2000);
+    } catch {
+      // Ignore clipboard failures
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center w-full h-full justify-between pt-12 pb-8 px-6 relative z-10 overflow-hidden">
-      
+    <div className="flex flex-col items-center w-full h-full justify-between pt-4 pb-6 px-6 relative z-10 overflow-hidden text-[#2b241e]">
       {/* Top Action Bar */}
-      <div className="absolute top-8 right-8 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
-        <div className="flex gap-3">
-          <button 
-            onClick={toggleFullscreen} 
-            className="w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 transition-all border border-white/20 shadow-2xl active:scale-90"
+      <div className="absolute top-4 right-6 flex flex-col items-end gap-3 z-[200] pointer-events-auto">
+        <div className="flex gap-2.5">
+          <button
+            onClick={toggleFullscreen}
+            className="liquid-glass-subtle w-11 h-11 rounded-full flex items-center justify-center text-[#2b241e] hover:text-[#1a1510] active:scale-95"
             title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {isFullscreen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
               ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
               )}
             </svg>
           </button>
-          
-          <button 
-            onClick={handleRefresh} 
-            className={`w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-300 transition-all border border-white/20 shadow-2xl active:scale-90 ${isRefreshing ? 'animate-spin' : ''}`}
+
+          <button
+            onClick={handleRefresh}
+            className={`liquid-glass-subtle w-11 h-11 rounded-full flex items-center justify-center text-[#2b241e] hover:text-[#1a1510] active:scale-95 ${isRefreshing ? 'animate-spin' : ''}`}
             title="Refresh Feed"
+            aria-label="Refresh Feed"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
 
-          <button 
-            onClick={() => setShowSetup(!showSetup)} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl border border-white/20 active:scale-90 ${showSetup ? 'bg-white text-black' : 'bg-white/10 text-slate-300'}`}
+          <button
+            onClick={() => setShowSetup(!showSetup)}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 ${showSetup ? 'liquid-cta' : 'liquid-glass-subtle text-[#2b241e] hover:text-[#1a1510]'}`}
+            aria-label="Menu"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 12h16M4 18h16" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
-        
+
         {showSetup && (
-          <div className="bg-slate-900/95 backdrop-blur-3xl p-6 rounded-[32px] shadow-2xl border border-white/10 mt-2 w-64 text-left animate-fade-in-up origin-top-right">
-            <button onClick={() => { onToggleMode(); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2 border border-white/10 hover:bg-white hover:text-black transition-all">Launch Feed</button>
-            <button onClick={() => { setShowOverallStats(true); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest mb-2 border border-white/10 hover:bg-white hover:text-black transition-all">Overall Stats</button>
-            <button onClick={() => { onAdmin(); setShowSetup(false); }} className="w-full py-4 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white hover:text-black transition-all">Admin Panel</button>
+          <div className="liquid-glass-modal p-3.5 rounded-[28px] mt-1 w-60 text-left animate-fade-in-up origin-top-right space-y-2">
+            <button onClick={() => { onToggleMode(); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Launch Live Feed</button>
+            <button onClick={() => { setShowOverallStats(true); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Overall Stats</button>
+            <button onClick={() => { onAdmin(); setShowSetup(false); }} className="liquid-glass-subtle w-full py-3.5 px-4 text-[#2b241e] rounded-2xl text-xs font-semibold text-left whitespace-nowrap">Admin Panel</button>
           </div>
         )}
       </div>
 
-      {/* Overall Stats Modal */}
-      {showOverallStats && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-fade-in">
-           <div className="bg-slate-900 border border-white/10 p-10 rounded-[48px] w-full max-w-md shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-fade-in-up">
-              <div className="flex items-center justify-between mb-8">
-                <div className="text-left">
-                  <h3 className="text-2xl font-black italic tracking-tighter uppercase text-white">Question Matrix</h3>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Breakdown by Segment</p>
-                </div>
-                <button onClick={() => setShowOverallStats(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white/40 border border-white/10">
-                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                   </svg>
-                </button>
+      {/* QR Code Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-[#2b241e]/45 backdrop-blur-xl animate-fade-in" onClick={() => setShowQrModal(false)}>
+          <div className="liquid-glass-modal p-7 md:p-8 rounded-[36px] w-full max-w-sm text-center animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-left">
+                <h3 className="text-xl font-bold tracking-tight text-[#2b241e]">Scan on Your Phone</h3>
+                <p className="text-xs text-[#5c5147] mt-0.5">EDEX IISJ · One review per phone</p>
               </div>
-
-              <div className="space-y-6">
-                {categories.map(cat => (
-                  <div key={cat.id} className="bg-white/5 p-6 rounded-3xl border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all">
-                    <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-1">{cat.label}</p>
-                      <p className="text-xs font-bold text-white/80 leading-tight pr-4">{cat.question}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <span className="text-2xl font-black text-white">{stats.categoryAverages[cat.id] || "4.8"}</span>
-                        <span className="text-yellow-500 text-xl">★</span>
-                      </div>
-                      <div className="w-12 h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
-                        <div 
-                          className="h-full bg-yellow-500 rounded-full" 
-                          style={{ width: `${(parseFloat(stats.categoryAverages[cat.id] || "4.8") / 5) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => setShowOverallStats(false)}
-                className="w-full py-5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] mt-10 active:scale-95 transition-all shadow-2xl"
-              >
-                CLOSE OVERVIEW
+              <button onClick={() => setShowQrModal(false)} className="liquid-glass-subtle w-10 h-10 rounded-full flex items-center justify-center text-[#2b241e]" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-           </div>
+            </div>
+
+            <div className="p-4 bg-white rounded-[24px] inline-block shadow-lg border border-[#312922]/10 mb-5">
+              <img key={qrTick} src={qrCodeUrl} alt="Scan to review on your phone" className="w-56 h-56" />
+            </div>
+
+            <p className="text-xs text-[#5c5147] leading-relaxed mb-6">
+              Point your phone camera at this QR code to submit your EDEX Educational Exhibition review directly from your device.
+            </p>
+
+            <div className="space-y-2.5">
+              <button
+                onClick={handleCopyRemoteUrl}
+                className="liquid-glass-subtle w-full py-3.5 text-[#2b241e] rounded-2xl text-xs font-semibold active:scale-[0.98]"
+              >
+                {qrCopied ? 'Link Copied' : 'Copy Mobile Link'}
+              </button>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="liquid-cta w-full py-3.5 rounded-2xl text-xs font-bold active:scale-[0.98]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full max-w-2xl">
-        {/* Main Sentiment Dashboard */}
+      {/* Overall Stats Modal */}
+      {showOverallStats && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-[#2b241e]/45 backdrop-blur-xl animate-fade-in" onClick={() => setShowOverallStats(false)}>
+          <div className="liquid-glass-modal p-7 md:p-8 rounded-[36px] w-full max-w-md animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-left">
+                <h3 className="text-xl font-bold tracking-tight text-[#2b241e]">Category Breakdown</h3>
+                <p className="text-xs text-[#5c5147] mt-0.5">Average visitor ratings at IISJ</p>
+              </div>
+              <button onClick={() => setShowOverallStats(false)} className="liquid-glass-subtle w-10 h-10 rounded-full flex items-center justify-center text-[#2b241e]" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="divide-y divide-[#312922]/12">
+              {categories.map(cat => (
+                <div key={cat.id} className="py-4 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs text-[#5c5147] font-medium mb-0.5">{cat.label}</p>
+                    <p className="text-sm font-semibold text-[#2b241e] leading-snug">{cat.question}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="flex items-center gap-1 justify-end tabular-nums">
+                      <span className="text-2xl font-bold text-[#2b241e]">{stats.categoryAverages[cat.id] || "4.8"}</span>
+                      <span className="text-[#b68928] text-lg">★</span>
+                    </div>
+                    <div className="w-14 h-1.5 bg-[#312922]/12 rounded-full mt-1.5 overflow-hidden ml-auto">
+                      <div
+                        className="h-full bg-[#312922] rounded-full"
+                        style={{ width: `${(parseFloat(stats.categoryAverages[cat.id] || "4.8") / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowOverallStats(false)}
+              className="liquid-cta w-full py-3.5 rounded-2xl text-xs font-bold mt-6 active:scale-[0.98]"
+            >
+              Close Overview
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-xl">
+        {/* Main Frosted Sentiment Card */}
         <div className="w-full animate-fade-in-up flex flex-col items-center">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full group-hover:bg-white/20 transition-all duration-1000"></div>
-            <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-10 rounded-[48px] shadow-2xl relative flex flex-col items-center min-w-[300px] border-b-white/20">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-[8px] font-black text-green-400 uppercase tracking-[0.3em]">Live Feed</span>
-                </div>
-                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Community Rating</span>
-              </div>
-              
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-8xl font-black text-white tracking-tighter">{stats.avg}</span>
-                <span className="text-4xl text-yellow-500 animate-glow-pulse">★</span>
-              </div>
+          <div className="liquid-glass px-10 py-7 rounded-[36px] flex flex-col items-center min-w-[300px] sm:min-w-[350px]">
+            <div className="flex items-center gap-2 text-xs text-[#5c5147] font-semibold mb-2.5 tracking-wide">
+              <span>EDEX Educational Exhibition</span>
+              <span aria-hidden="true">·</span>
+              <span>IISJ</span>
+            </div>
 
-              <div className="w-full h-px bg-white/10 my-6"></div>
+            <div className="flex items-baseline gap-2.5 mb-1 tabular-nums">
+              <span className="font-display text-7xl sm:text-8xl font-extrabold editorial-gradient-text tracking-tight">{stats.avg}</span>
+              <span className="text-4xl text-[#b68928] animate-glow-pulse">★</span>
+            </div>
 
-              <div className="flex justify-center gap-10">
-                <div className="text-center">
-                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">TOTAL VISITS</p>
-                  <p className="text-lg font-black text-white">{stats.count + 420}</p>
-                </div>
-                <div className="w-px h-10 bg-white/10"></div>
-                <div className="text-center">
-                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">REVIEWS</p>
-                  <p className="text-lg font-black text-white">{stats.count}</p>
-                </div>
+            <div className="w-full h-px bg-[#312922]/12 my-4"></div>
+
+            <div className="flex justify-center items-center gap-10 tabular-nums">
+              <div className="text-center">
+                <p className="text-xs text-[#5c5147] font-medium mb-0.5">Total Visits</p>
+                <p className="text-xl font-bold text-[#2b241e]">{stats.count + 420}</p>
+              </div>
+              <div className="w-px h-9 bg-[#312922]/12"></div>
+              <div className="text-center">
+                <p className="text-xs text-[#5c5147] font-medium mb-0.5">Reviews</p>
+                <p className="text-xl font-bold text-[#2b241e]">{stats.count}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CTA Section */}
-        <div className="flex flex-col items-center gap-8 w-full animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        {/* CTA & Phone QR Section */}
+        <div className="flex flex-col items-center gap-3.5 w-full max-w-md animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <button
             onClick={onStart}
-            className="group relative w-full max-w-md py-8 bg-white text-black rounded-[28px] text-4xl font-[900] shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15)] hover:scale-[1.03] transition-all active:scale-95 overflow-hidden uppercase tracking-tighter"
+            className="liquid-cta group relative w-full py-4.5 sm:py-5 rounded-full text-xl sm:text-2xl font-bold tracking-tight active:scale-[0.98] overflow-hidden flex items-center justify-center gap-3"
           >
-            <span className="relative z-10">POST REVIEW</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <span className="relative z-10">Post Review</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 relative z-10 transition-transform duration-200 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
           </button>
 
-          {faceIdEnabled && (
-            <div className="flex items-center gap-6 w-full max-w-md transition-all hover:bg-white/5 p-4 rounded-[32px] cursor-pointer" onClick={() => setShowSetup(true)}>
-              <div className="p-3 bg-white rounded-2xl shrink-0 shadow-lg">
-                <img key={qrTick} src={qrCodeUrl} alt="Scan" className="w-14 h-14 mix-blend-multiply" />
-              </div>
-              <div className="text-left">
-                <h3 className="text-white font-black text-xs mb-1 uppercase tracking-widest">SUBMIT VIA MOBILE</h3>
-                <p className="text-slate-500 text-[9px] font-bold uppercase tracking-tight max-w-[140px]">Scan to bypass the kiosk queue</p>
-              </div>
-              <div className="ml-auto w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/20">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+          <button
+            type="button"
+            onClick={() => setShowQrModal(true)}
+            className="liquid-glass-subtle flex items-center gap-4 w-full p-3.5 rounded-[26px] cursor-pointer text-left active:scale-[0.98]"
+          >
+            <div className="p-2 bg-white rounded-2xl shrink-0 shadow-sm border border-[#312922]/10">
+              <img key={qrTick} src={qrCodeUrl} alt="Scan to review on your phone" className="w-14 h-14" />
             </div>
-          )}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[#2b241e] font-bold text-sm mb-0.5">Scan with your phone</h3>
+              <p className="text-[#5c5147] text-xs font-medium">1 review per phone · Tap to enlarge</p>
+            </div>
+            <div className="ml-auto w-9 h-9 rounded-full bg-[#312922]/10 flex items-center justify-center text-[#2b241e] shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
         </div>
       </div>
 
       {/* Live Recent Feedback Ticker */}
       {stats.recent.length > 0 && (
-        <div className="w-full max-w-4xl pt-8 border-t border-white/5 animate-fade-in">
-           <div className="flex items-center gap-4 mb-4 justify-center md:justify-start">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em]">Recent Activity</span>
-              <div className="h-px flex-1 bg-white/5 hidden md:block"></div>
-           </div>
-           <div className="overflow-hidden whitespace-nowrap relative group">
-              <div className="flex gap-12 animate-shimmer py-2">
-                 {/* Duplicate items for infinite scroll effect if few items */}
-                 {[...stats.recent, ...stats.recent].map((comment, i) => (
-                   <div key={i} className="inline-flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/5 backdrop-blur-md">
-                      <div className="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center text-[10px] font-black text-white">
-                        {comment.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <span className="text-white font-black text-[10px] uppercase tracking-tighter mr-2">{comment.name}</span>
-                        <span className="text-slate-500 text-[10px] italic">"{comment.text.length > 40 ? comment.text.substring(0, 40) + '...' : comment.text}"</span>
-                      </div>
-                   </div>
-                 ))}
-              </div>
-              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-black to-transparent z-10"></div>
-              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black to-transparent z-10"></div>
-           </div>
+        <div className="w-full max-w-4xl pt-4 border-t border-[#312922]/12 animate-fade-in">
+          <div className="flex items-center gap-4 mb-2.5 justify-center md:justify-start">
+            <span className="text-xs font-semibold text-[#5c5147]">Recent Visitor Notes</span>
+            <div className="h-px flex-1 bg-[#312922]/12 hidden md:block"></div>
+          </div>
+          <div className="overflow-hidden whitespace-nowrap relative">
+            <div className="flex gap-4 animate-shimmer py-1 w-max">
+              {[...stats.recent, ...stats.recent].map((comment, i) => (
+                <div key={i} className="liquid-glass-subtle inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl">
+                  <div className="w-7 h-7 bg-[#312922] rounded-full flex items-center justify-center text-xs font-bold text-[#f7f3ec] shrink-0">
+                    {comment.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-[#2b241e] font-bold mr-2">{comment.name}</span>
+                    <span className="text-[#5c5147] italic">"{comment.text.length > 42 ? comment.text.substring(0, 42) + '...' : comment.text}"</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Footer Branding */}
-      <footer className="mt-8 opacity-20">
-        <p className="text-[10px] font-black text-white uppercase tracking-[0.5em]">SOUVENIR EXPERIENCE • REVIEW APP</p>
+      {/* Quiet Footer */}
+      <footer className="mt-3 text-xs font-medium text-[#5c5147]">
+        EDEX Educational Exhibition · IISJ
       </footer>
     </div>
   );
